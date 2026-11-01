@@ -8,5 +8,9 @@ chronos-forecasting>=2.0  # 04_models chronos_* (pulls in torch)
 timesfm[torch]>=3.0       # 04_models timesfm
 tirex-ts>=1.4             # 04_models tirex
 tqdm                      # 04_models kronos_small (code in core/kronos)
+lightning                 # 04_models moirai_2, with gluonts and jaxtyping; then uni2ts itself WITHOUT its pins:
+gluonts                   #   pip install --no-deps uni2ts==2.0.0   (its pins would downgrade torch and numpy)
+jaxtyping
+transformers>=5           # 04_models timemoe (code in core/timemoe)
 streamlit>=1.40           # dashboard.py
 plotly>=5.18              # dashboard.py

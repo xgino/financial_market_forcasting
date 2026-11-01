@@ -7,6 +7,7 @@ Writes data/prices/<asset>.csv: date, open_eur, close_eur, close_raw, fx_close
   open never uses information from later that day.
 - EUR/USD repair: Yahoo has some bad EUR/USD days (a rate that jumps away and comes straight back,
   e.g. in 2008). Those get the straight line between the good days around them. Every repair is printed.
+- Today's bar is left out until it's final (tomorrow), so a re-download never changes old days.
 - Assets are NOT repaired, only flagged: a market can really open very low and recover the same day.
 - currency "LOCAL": kept in its own currency (training-only assets: only the moves matter there).
   "until": stop at that date, so an asset that continues under another name isn't counted twice.
@@ -38,6 +39,9 @@ def download(ticker):
         idx = idx.tz_localize(None)
     df.index = idx.normalize()
     df = df[~df.index.duplicated(keep="last")].sort_index()
+    # today's bar isn't final yet (markets still open, crypto never closes): it would change on the next
+    # download and make the forecast cache redo old days. It's added tomorrow, when it's final.
+    df = df[df.index < pd.Timestamp.today().normalize()]
     df = df[["Open", "Close"]].dropna()
     return df[(df["Open"] > 0) & (df["Close"] > 0)]
 

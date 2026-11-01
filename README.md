@@ -1,34 +1,81 @@
 # Paper fund (v2)
 
 A lab that tests whether any model can really forecast markets, with a virtual EUR 1000 and strict rules
-against fooling yourself. Every folder with a number is a step. Steps run in order.
+against fooling yourself. Gold first; silver, stocks, bonds, Bitcoin and Ethereum are in too.
+Every folder with a number is a step. Steps run in order. What's done and what's next: [ROADMAP.md](ROADMAP.md).
+
+## The flow
+
+```
+01_data        prices (Yahoo, in EUR) + macro (FRED)          ─┐
+02_features    trend, swings, situation label per day           │  the data
+03_training    your own models (gbm, linear), walk-forward      ─┘
+04_models      the battle: every model forecasts every day,       one forecast = bad / middle / good case
+               20 trading days ahead, scored once those days are over
+05_selection   who to trust this month, per situation (or nobody = base plan)
+06_strategies  what to do with EUR 1000: buy / sell / hold, with fees
+07_judge       plain-language report: what's good, what needs a look
+08_notify      the monthly email, only when it matters
+```
 
 | folder | what happens | writes |
 |---|---|---|
-| `01_data/` | download and clean prices | `data/prices/*.csv` |
-| `02_features/` | trend, swings, situations per day | `data/features/`, `data/situations/` |
-| `03_training/` | train your own models, walk-forward, tuned | `data/checkpoints/`, `data/training/` |
-| `04_models/` | the battle: every model forecasts, gets scored and ranked | `data/battle/*.csv` |
-| `05_selection/` | who to trust: per month and situation, which model(s) to follow, or none | `data/selection/*.csv` |
-| `06_strategies/` | what to do with EUR 1000: buy / sell / hold, how much, month by month with fees | `data/simulation/*.csv` |
-| `07_...` | next: the judge, live paper trading | |
+| `01_data/` | download and clean prices and macro data. Today's bar waits until it's final (tomorrow) | `data/prices/`, `data/macro/` |
+| `02_features/` | trend, swings and one of 6 situations per day (up/flat/down × calm/wild) | `data/features/`, `data/situations/` |
+| `03_training/` | train your own models walk-forward: each checkpoint only learns from results finished by its date | `data/checkpoints/`, `data/training/` |
+| `04_models/` | the battle: every model forecasts, gets scored and ranked, month by month (skill book) | `data/forecasts/`, `data/battle/` |
+| `05_selection/` | per month and situation: which model(s) to follow, or none | `data/selection/` |
+| `06_strategies/` | EUR 1000 month by month, with fees, against buy & hold | `data/simulation/` |
+| `07_judge/` | checks data, models, strategies and live results | `data/judge/` |
+| `08_notify/` | the monthly email (needs `secrets.env`) | `data/notify/` |
 
 Not numbered:
-- `core/` fixed building blocks every step uses (timeline that hides the future, wallet, scoring)
+- `core/` fixed building blocks every step uses (timeline that hides the future, wallet, scoring, the
+  pretrained model wrappers, copied model code in `core/kronos/` and `core/timemoe/`)
 - `tests/` checks that everything stays honest
-- `settings.py` all global settings in one place
+- `settings.py` all global settings in one place (assets, horizon, holdout, trust, fees)
 - `main.py` runs the steps, `dashboard.py` shows everything
 
-## Commands
+## The models (04_models)
+
+| kind | models |
+|---|---|
+| rules | `naive`, `drift`, `mean_reversion`, `bounce`, `history_range` |
+| statistics | `theta`, `ets`, `garch`, `analog` (pattern matching) |
+| your own (trained in 03) | `gbm`, `linear` |
+| pretrained, zero shot | `chronos_small`, `chronos_base`, `chronos_2` (Amazon), `timesfm` (Google), `tirex` (NX-AI), `kronos_small` (market candles), `moirai_2` (Salesforce), `timemoe` (Time-MoE 200M) |
+
+Pretrained models download themselves from Hugging Face the first time (cached in `~/.cache/huggingface`).
+They only earn trust on days after their release (`seen_until`): before that they may have seen the prices.
+
+## Setup (once)
+
+Only the `venv/` in this folder runs this project. Any other Python (Anaconda, the system one) is stopped
+with a message (`core/env.py`), because other package versions break in ways that are hard to trace.
+
 ```
+python3.12 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
+pip install --no-deps uni2ts==2.0.0     # for moirai_2: its own pins would downgrade torch and numpy
+```
+VS Code picks `venv/` by itself (`.vscode/settings.json`).
+
+## Commands
+Every time you open a terminal: `source venv/bin/activate` (or put `venv/bin/` in front of each command).
+```
 python main.py              # every step
 python main.py 4            # one step
+python main.py 2-4          # steps 2 to 4
+python main.py 4 --only tirex,moirai_2   # only these players
 python main.py 4 --check    # prove step 4's players can't see the future
 python main.py list         # steps and players
 python main.py test         # all tests
-streamlit run dashboard.py  # the dashboard
+streamlit run dashboard.py  # the dashboard (or: venv/bin/streamlit run dashboard.py)
 ```
+
+Every step only does what's missing, so stopping and starting again continues where it was. Forecasts are
+cached per model and asset; when old prices change, only the days from the first changed month are redone.
 
 ## How a folder works
 - `_step.py` runs the folder. Files starting with `_` are the folder's machinery.

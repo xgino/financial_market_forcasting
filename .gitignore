@@ -1,2 +1,18 @@
+# Python environments: only venv/ is used (core/env.py stops any other Python); never in git
 venv/
 cenv/
+.venv/
+
+# Python leftovers (__pycache__/ and data/ are kept in git on purpose)
+.pytest_cache/
+
+# Secrets: the mail account for 08_notify. Only secrets.example.env (no passwords) belongs in git.
+secrets.env
+*.env
+!secrets.example.env
+
+# macOS and editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json

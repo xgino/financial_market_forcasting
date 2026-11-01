@@ -11,7 +11,7 @@ as returns. Price it expects = today's price x (1 + middle guess).
 | your own, trained in 03 | `gbm.py` |
 | rules | `naive.py` (the floor), `drift.py`, `mean_reversion.py`, `bounce.py` |
 | statistics | `history_range.py`, `analog.py`, `ets.py`, `theta.py` |
-| pretrained | `chronos_small.py`, `chronos_base.py`, `chronos_2.py`, `timesfm.py`, `tirex.py`, `kronos_small.py` (all with `seen_until`; Kronos is slow, so it only forecasts from its `first_day`) |
+| pretrained | `chronos_small.py`, `chronos_base.py`, `chronos_2.py`, `timesfm.py`, `tirex.py`, `kronos_small.py`, `moirai_2.py`, `timemoe.py` (all with `seen_until`; Kronos is slow, so it only forecasts from its `first_day`) |
 
 Add a model:
 ```python

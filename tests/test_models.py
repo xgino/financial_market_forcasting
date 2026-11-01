@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 import settings
 from core import battle
@@ -17,7 +18,8 @@ def usable(m):
     try:
         if m.kind == "pretrained":
             __import__(next(lib for key, lib in (("chronos", "chronos"), ("timesfm", "timesfm"), ("tirex", "tirex"),
-                                                 ("kronos", "torch")) if key in m.run_name))
+                                                 ("kronos", "torch"), ("moirai", "uni2ts"), ("timemoe", "torch"))
+                       if key in m.run_name))
         if m.run_name == "gbm" and m.index.empty:
             return False
         if m.run_name in ("ets", "theta"):
@@ -115,3 +117,15 @@ def test_choices_cannot_see_the_future():
     cols = ["selector", "asset", "date", "p10", "p50", "p90", "main_model", "reason", "top_models"]
     a, b = a[a["date"] <= cutoff][cols].reset_index(drop=True), b[b["date"] <= cutoff][cols].reset_index(drop=True)
     assert len(a) and a.equals(b), "a choice changed when only the future changed"
+
+def test_cache_redoes_only_from_the_first_changed_month():
+    """Old prices changed after a date: cached forecasts before that month are kept, from it on redone."""
+    tl = synthetic.timeline()
+    cal = tl.calendar()
+    cutoff, end = cal[1500], cal[-1]
+    fake = battle.scrambled(tl, cutoff)
+    old = battle.month_hashes(tl, ["asset0"], end, macro=True)
+    cut = battle.first_changed_day(old, battle.month_hashes(fake, ["asset0"], end, macro=True))
+    first_changed = cal[cal > cutoff][0]
+    assert cut == pd.Timestamp(first_changed.strftime("%Y-%m-01")), f"redo from {cut}, expected {first_changed}"
+    assert battle.first_changed_day(old, battle.month_hashes(tl, ["asset0"], end, macro=True)) is None

@@ -14,6 +14,8 @@ again: it continues where it was. Forgot a month? The next run fills in what's m
   python main.py 4-6 --holdout   THE FINAL TEST: include the holdout. Results go to separate *_holdout files.
                                  Do it once, when models and strategies are final. Every opening is logged.
   streamlit run dashboard.py     the dashboard
+
+Always from the venv in this folder (source venv/bin/activate): any other Python is stopped (core/env.py).
 """
 import argparse
 import sys
@@ -23,6 +25,10 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from core.env import require_venv
+
+require_venv()  # only the venv in this folder, never Anaconda or another Python
 
 import settings
 from core.plugins import load_file, player_files, step_folders

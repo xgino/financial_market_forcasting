@@ -6,6 +6,8 @@ Shared code for pretrained models, so each model file in 04_models/ stays a few 
   TimesFM   Google TimesFM 2.5                  pip install "timesfm[torch]"
   TiRex     NX-AI TiRex (xLSTM)                 pip install tirex-ts
   Kronos    Kronos, trained on market candles   code copied into core/kronos (not on pip)
+  Moirai2   Salesforce Moirai 2                 pip install --no-deps uni2ts, plus lightning gluonts jaxtyping
+  TimeMoE   Time-MoE (mixture of experts)       code copied into core/timemoe (instead of trust_remote_code)
 
 All run on the Mac GPU automatically (settings.DEVICE). Pretrained models can have seen old prices
 while they were trained, so their files set seen_until (release date): those forecasts never earn trust.
@@ -14,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 import settings
-from core.contracts import Model, torch_device
+from core.contracts import Model, bell_range, torch_device
 
 
 class Chronos(Model):
@@ -254,3 +256,110 @@ class Kronos(Model):
                 f"the last {self.context_days} days and the range is where most of them end.",
                 "It can't explain its own reasoning, so judge it only by its track record, and only after "
                 f"its release ({self.seen_until})."]
+
+
+class Moirai2(Model):
+    kind = "pretrained"
+    about = "Pretrained Salesforce transformer (Moirai 2), zero shot. Tiny and fast, runs on the CPU."
+
+    def __init__(self, horizon, cfg):
+        super().__init__(horizon, cfg)
+        self.checkpoint = self.s.get("checkpoint", "Salesforce/moirai-2.0-R-small")
+        self.context_days = self.s.get("context_days", 512)
+        self.batch_size = self.s.get("batch_size", 256)
+        self._f = None
+
+    def _load(self):
+        if self._f is None:
+            from uni2ts.model.moirai2 import Moirai2Forecast, Moirai2Module
+
+            # always the CPU: its scaler counts in float64, which the Mac GPU can't do
+            print(f"  loading {self.checkpoint} on cpu (first time downloads it)...")
+            self._f = Moirai2Forecast(module=Moirai2Module.from_pretrained(self.checkpoint),
+                                      prediction_length=self.horizon, context_length=self.context_days,
+                                      target_dim=1, feat_dynamic_real_dim=0, past_feat_dynamic_real_dim=0)
+        return self._f
+
+    def predict(self, view, asset):
+        return self.predict_batch([view], asset)[0]
+
+    def predict_batch(self, views, asset):
+        windows = [v.closes(asset, self.context_days).to_numpy() for v in views]
+        out = np.full((len(views), 3), np.nan)
+        ok = [i for i, w in enumerate(windows) if len(w) >= 30]
+        if not ok:
+            return out
+        f = self._load()
+        for s in range(0, len(ok), self.batch_size):
+            idx = ok[s:s + self.batch_size]
+            q = f.predict([windows[i].astype(np.float32) for i in idx])   # (batch, 9 quantiles, horizon)
+            end = q[:, [0, 4, 8], -1].astype(float)                       # 10% / 50% / 90% at the last day
+            last = np.array([windows[i][-1] for i in idx], dtype=float)
+            out[idx] = end / last[:, None] - 1
+        return out
+
+    def explain(self, view, asset):
+        return [f"A pretrained neural network that continues the shape of the last {self.context_days} prices.",
+                "It can't explain its own reasoning, so judge it only by its track record, and only on years after "
+                f"its release ({self.seen_until}): before that it may have seen these prices while it was trained."]
+
+
+class TimeMoE(Model):
+    kind = "pretrained"
+    about = "Pretrained mixture of experts (Time-MoE), zero shot. Gives one middle guess; the range comes from recent swings."
+
+    def __init__(self, horizon, cfg):
+        super().__init__(horizon, cfg)
+        self.checkpoint = self.s["checkpoint"]
+        self.revision = self.s.get("revision")
+        self.context_days = self.s.get("context_days", 512)
+        self.swing_days = self.s.get("swing_days", 60)
+        self.batch_size = self.s.get("batch_size", 64)
+        self._m = None
+
+    def _load(self):
+        if self._m is None:
+            import torch
+            from core.timemoe.modeling_time_moe import TimeMoeForPrediction, TimeMoeRotaryEmbedding
+
+            device = torch_device(self.s.get("device", settings.DEVICE))
+            print(f"  loading {self.checkpoint} on {device} (first time downloads it)...")
+            m = TimeMoeForPrediction.from_pretrained(self.checkpoint, revision=self.revision, dtype=torch.float32)
+            for mod in m.modules():
+                if isinstance(mod, TimeMoeRotaryEmbedding):
+                    mod.rebuild()
+            self._torch, self._device = torch, device
+            self._m = m.to(device).eval()
+        return self._m
+
+    def predict(self, view, asset):
+        return self.predict_batch([view], asset)[0]
+
+    def predict_batch(self, views, asset):
+        windows = [v.closes(asset, self.context_days).to_numpy() for v in views]
+        out = np.full((len(views), 3), np.nan)
+        ok = [i for i, w in enumerate(windows) if len(w) >= self.context_days]   # one batch needs equal lengths
+        if not ok:
+            return out
+        m, torch = self._load(), self._torch
+        x = np.stack([windows[i] for i in ok]).astype(np.float32)
+        mu, sd = x.mean(1, keepdims=True), x.std(1, keepdims=True) + 1e-8
+        x = (x - mu) / sd
+        mids = []
+        for s in range(0, len(x), self.batch_size):
+            with torch.no_grad():   # the 32 day head in one pass, first 20 days kept (no step by step generate)
+                o = m(input_ids=torch.tensor(x[s:s + self.batch_size], device=self._device),
+                      max_horizon_length=32, use_cache=False, return_dict=True)
+            mids.append(o.logits[:, -1, self.horizon - 1].float().cpu().numpy())
+        mid = np.concatenate(mids) * sd[:, 0] + mu[:, 0]
+        for r, i in enumerate(ok):
+            w = windows[i]
+            swing = np.diff(np.log(w[-self.swing_days - 1:])).std(ddof=1) * np.sqrt(self.horizon)
+            out[i] = bell_range(np.log(mid[r] / w[-1]), swing) if mid[r] > 0 else np.nan
+        return out
+
+    def explain(self, view, asset):
+        return [f"A pretrained neural network that continues the shape of the last {self.context_days} prices. "
+                f"It only gives a middle guess; the bad..good range is the last {self.swing_days} days' swings.",
+                "It can't explain its own reasoning, so judge it only by its track record, and only on years after "
+                f"its release ({self.seen_until}): before that it may have seen these prices while it was trained."]

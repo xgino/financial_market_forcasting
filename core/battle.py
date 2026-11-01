@@ -39,6 +39,26 @@ def data_hash(tl, assets, until, macro=False):
     return store.fingerprint(*parts)
 
 
+def month_hashes(tl, assets, until, macro=False):
+    """{"2014-03": fingerprint of that month's data}. When old prices change, only forecasts from the
+    first changed month on are made again: a forecast never depends on later data."""
+    v = tl.view(until)
+    parts = [v.closes(a).round(6) for a in sorted(assets)]
+    if macro:
+        parts += [v.extra(n).round(6) for n in sorted(tl.extra_names)]
+    months = sorted({str(m) for p in parts for m in p.index.to_period("M")})
+    by = [p.groupby(p.index.to_period("M").astype(str)) for p in parts]
+    return {m: store.fingerprint(*[g.get_group(m) for g in by if m in g.groups]) for m in months}
+
+
+def first_changed_day(old, new):
+    """First day of the first month whose data differs (None = nothing changed up to old's last month)."""
+    for m in sorted(old):
+        if old[m] != new.get(m):
+            return pd.Timestamp(m + "-01")
+    return None
+
+
 def eligible_days(tl, asset, model, use_first_day=True):
     days = tl.view(tl.calendar()[-1]).closes(asset).index
     days = days[days >= tl.first_date(asset, model.min_history)]
@@ -54,14 +74,24 @@ def forecast_history(model, tl, asset, fresh=False, progress=True):
     p = store.path("forecasts", asset, f"{model.run_name}.csv")
     used = assets_used(model, tl, asset)
     settings_key = store.fingerprint(type(model).__name__, model.horizon, model.cache_settings())
+    macro = getattr(model, "uses_macro", False)
     cached = pd.DataFrame(columns=COLS, dtype=float)
     if p.exists() and not fresh:
         m = store.read_meta(p)
-        if (m.get("settings") == settings_key and m.get("assets") == sorted(used)
-                and m.get("data") == data_hash(tl, used, m["until"], getattr(model, "uses_macro", False))):
-            cached = store.read_csv(p, index_col="date")
+        if m.get("settings") == settings_key and m.get("assets") == sorted(used):
+            if m.get("data") == data_hash(tl, used, m["until"], macro):
+                cached = store.read_csv(p, index_col="date")
+            elif m.get("months"):   # old prices changed: keep everything before the first changed month
+                cut = first_changed_day(m["months"], month_hashes(tl, used, m["until"], macro))
+                cached = store.read_csv(p, index_col="date")
+                cached = cached[cached.index < cut] if cut is not None else cached.iloc[:0]
+                if progress:
+                    print(f"  {asset} {model.run_name}: old prices changed from {cut.date() if cut is not None else '?'}, "
+                          f"redoing from there")
+            elif progress:
+                print(f"  {asset} {model.run_name}: old prices changed, computing again")
         elif progress:
-            print(f"  {asset} {model.run_name}: settings or old prices changed, computing again")
+            print(f"  {asset} {model.run_name}: settings changed, computing again")
 
     todo = days.difference(cached.index)
     if len(todo):
@@ -78,7 +108,8 @@ def forecast_history(model, tl, asset, fresh=False, progress=True):
                 done.index.name = "date"
                 store.write_csv(done, p, {"settings": settings_key, "assets": sorted(used),
                                           "until": str(done.index.max().date()),
-                                          "data": data_hash(tl, used, done.index.max(), getattr(model, "uses_macro", False))})
+                                          "data": data_hash(tl, used, done.index.max(), macro),
+                                          "months": month_hashes(tl, used, done.index.max(), macro)})
         if progress:
             print()
         cached = done

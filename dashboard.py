@@ -1,6 +1,7 @@
 # paper-fund-v2/dashboard.py
 """
-The dashboard. Start it with:   streamlit run dashboard.py
+The dashboard. Start it with:   venv/bin/streamlit run dashboard.py   (or streamlit run dashboard.py after
+source venv/bin/activate; any other Python is stopped, see core/env.py)
 It opens in your browser. Pages (left side):
   Run          start any step with a button and watch its output
   Battle       month by month replay: every model's guess as a line, the winner, previous / next
@@ -26,6 +27,12 @@ import plotly.graph_objects as go
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from core.env import wrong_python  # noqa: E402
+
+if wrong_python():   # started from Anaconda or another Python: stop, its buttons would run steps with it too
+    st.error("Wrong Python: start the dashboard from the venv in this folder.")
+    st.code(wrong_python())
+    st.stop()
 import settings  # noqa: E402
 
 DATA = settings.DATA
