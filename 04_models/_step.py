@@ -55,7 +55,7 @@ def run(args):
         print("RESULT: no model sees the future" if ok else "RESULT: LOOKAHEAD FOUND")
         return {"no_future": ok}
 
-    journal = battle.build_journal(models, tl)
+    journal = battle.build_journal(models, tl, fresh=args.fresh)   # continues where it was, unless --fresh
     store.write_csv(journal, store.path("battle", "journal.csv"), index=False)
     book = battle.skillbook(journal, tl)
     board = battle.leaderboard(journal, models)

@@ -74,8 +74,11 @@ python main.py test         # all tests
 streamlit run dashboard.py  # the dashboard (or: venv/bin/streamlit run dashboard.py)
 ```
 
-Every step only does what's missing, so stopping and starting again continues where it was. Forecasts are
-cached per model and asset; when old prices change, only the days from the first changed month are redone.
+Every step only does what's missing, so stopping and starting again continues where it was (Ctrl+C is safe:
+forecasts are saved at least every minute). `--fresh` is the only way to redo a step from scratch.
+- The battle runs one model at a time over all assets, then frees its memory before the next model loads.
+- Forecasts are cached per model and asset. When old prices change, only days from the first changed month
+  are redone; a dividend rescale (ETFs) redoes nothing, because months are compared by their daily moves.
 
 ## How a folder works
 - `_step.py` runs the folder. Files starting with `_` are the folder's machinery.

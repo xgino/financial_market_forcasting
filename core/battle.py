@@ -14,8 +14,11 @@ Rules that keep it honest:
 - a score "as of" a date only uses forecasts whose 20 days had ended by then
 - pretrained models never earn trust on prices they may have trained on (SETTINGS seen_until)
 """
+import time
+
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 import settings
 from core import metrics, store
@@ -26,6 +29,9 @@ COLS = ["p10", "p50", "p90"]
 
 
 # ---------- forecasts ----------
+
+SAVE_EVERY = 60   # seconds: forecasts are saved at least this often, so a stopped run loses at most ~1 minute
+
 
 def assets_used(model, tl, asset):
     return list(tl.assets) if getattr(model, "uses_all_assets", False) else [asset]
@@ -41,9 +47,11 @@ def data_hash(tl, assets, until, macro=False):
 
 def month_hashes(tl, assets, until, macro=False):
     """{"2014-03": fingerprint of that month's data}. When old prices change, only forecasts from the
-    first changed month on are made again: a forecast never depends on later data."""
+    first changed month on are made again: a forecast never depends on later data.
+    Prices count as daily moves, not levels: Yahoo rescales an ETF's whole past at every dividend, which
+    changes no move except the dividend day's (and every model here reads moves, not euro levels)."""
     v = tl.view(until)
-    parts = [v.closes(a).round(6) for a in sorted(assets)]
+    parts = [np.log(v.closes(a)).diff().round(6) for a in sorted(assets)]
     if macro:
         parts += [v.extra(n).round(6) for n in sorted(tl.extra_names)]
     months = sorted({str(m) for p in parts for m in p.index.to_period("M")})
@@ -68,8 +76,9 @@ def eligible_days(tl, asset, model, use_first_day=True):
 
 
 def forecast_history(model, tl, asset, fresh=False, progress=True):
-    """Forecast for every eligible day. Only new days are computed; changed settings or changed old
-    prices mean everything for this model and asset is computed again."""
+    """Forecast for every eligible day. Only new days are computed (a stopped run continues where it was);
+    changed settings mean everything again, changed old prices only from the first changed month.
+    fresh=True ignores what's saved and replaces it."""
     days = eligible_days(tl, asset, model)
     p = store.path("forecasts", asset, f"{model.run_name}.csv")
     used = assets_used(model, tl, asset)
@@ -84,10 +93,11 @@ def forecast_history(model, tl, asset, fresh=False, progress=True):
             elif m.get("months"):   # old prices changed: keep everything before the first changed month
                 cut = first_changed_day(m["months"], month_hashes(tl, used, m["until"], macro))
                 cached = store.read_csv(p, index_col="date")
-                cached = cached[cached.index < cut] if cut is not None else cached.iloc[:0]
+                if cut is not None:
+                    cached = cached[cached.index < cut]
                 if progress:
-                    print(f"  {asset} {model.run_name}: old prices changed from {cut.date() if cut is not None else '?'}, "
-                          f"redoing from there")
+                    print(f"  {asset} {model.run_name}: " + (f"old prices changed from {cut.date()}, redoing from there"
+                          if cut is not None else "old prices only rescaled (dividend), nothing to redo"))
             elif progress:
                 print(f"  {asset} {model.run_name}: old prices changed, computing again")
         elif progress:
@@ -95,14 +105,17 @@ def forecast_history(model, tl, asset, fresh=False, progress=True):
 
     todo = days.difference(cached.index)
     if len(todo):
-        parts = []
-        for s in range(0, len(todo), 256):
-            chunk = todo[s:s + 256]
+        step = getattr(model, "chunk_days", 256)   # slow models use smaller chunks, so a stop loses less
+        parts, saved = [], time.monotonic()
+        bar = tqdm(total=len(todo), desc=f"  {asset} {model.run_name}", unit="day", disable=not progress,
+                   dynamic_ncols=True, mininterval=1.0)
+        for s in range(0, len(todo), step):
+            chunk = todo[s:s + step]
             parts.append(pd.DataFrame(model.predict_batch([tl.view(d) for d in chunk], asset),
                                       index=chunk, columns=COLS))
-            if progress:
-                print(f"\r  {asset} {model.run_name}: {min(s + 256, len(todo))}/{len(todo)} days", end="", flush=True)
-            if len(parts) % 8 == 0 or s + 256 >= len(todo):  # save progress as it goes (resume)
+            bar.update(len(chunk))
+            last = s + step >= len(todo)
+            if last or time.monotonic() - saved > SAVE_EVERY:  # save progress as it goes (resume)
                 done = pd.concat([cached] + parts) if len(cached) else pd.concat(parts)
                 done = done[~done.index.duplicated(keep="last")].sort_index()
                 done.index.name = "date"
@@ -110,16 +123,33 @@ def forecast_history(model, tl, asset, fresh=False, progress=True):
                                           "until": str(done.index.max().date()),
                                           "data": data_hash(tl, used, done.index.max(), macro),
                                           "months": month_hashes(tl, used, done.index.max(), macro)})
-        if progress:
-            print()
+                saved = time.monotonic()
+        bar.close()
         cached = done
     return cached.reindex(days)
 
 
 # ---------- journal ----------
 
-def build_journal(models, tl, progress=True):
+def forecast_all(models, tl, fresh=False, progress=True):
+    """Every model on every asset, ONE MODEL AT A TIME: a model forecasts all assets, then its network is
+    freed (model.unload) before the next one loads, so only one big model is ever in memory.
+    Returns {(run, asset): forecasts}."""
+    out = {}
+    for i, (run, model) in enumerate(models.items(), 1):
+        if progress:
+            print(f"[{i}/{len(models)}] {run}")
+        try:
+            for asset in tl.assets:
+                out[run, asset] = forecast_history(model, tl, asset, fresh=fresh, progress=progress)
+        finally:
+            model.unload()
+    return out
+
+
+def build_journal(models, tl, fresh=False, progress=True):
     h = settings.HORIZON_DAYS
+    forecasts = forecast_all(models, tl, fresh=fresh, progress=progress)
     parts = []
     for asset in tl.assets:
         closes = tl.view(tl.calendar()[-1]).closes(asset)
@@ -128,7 +158,7 @@ def build_journal(models, tl, progress=True):
         actual = closes.shift(-h) / closes - 1                # what really happened (scoring only)
         situation = regime_table(closes)                      # past only
         for run, model in models.items():
-            fc = forecast_history(model, tl, asset, progress=progress).dropna(subset=["p50"])
+            fc = forecasts[run, asset].dropna(subset=["p50"])
             d = fc.index
             cutoff = pd.Timestamp(str(model.seen_until)) if model.seen_until else None
             parts.append(pd.DataFrame({

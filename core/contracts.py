@@ -51,6 +51,28 @@ class Model:
         """Plain sentences: why this forecast. Models override it with their own reasons."""
         return [self.about]
 
+    def unload(self):
+        """Free a loaded network (pretrained models keep theirs in these attributes). It loads again by
+        itself when the model is used next."""
+        for k in ("_pipe", "_m", "_p", "_f", "_torch"):
+            if getattr(self, k, None) is not None:
+                setattr(self, k, None)
+        free_memory()
+
+
+def free_memory():
+    """Give memory back after a big model: Python's garbage, then the Mac GPU (or NVIDIA) cache."""
+    import gc
+    import sys
+
+    gc.collect()
+    torch = sys.modules.get("torch")   # only if something already imported it
+    if torch is not None:
+        if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
 
 def bell_range(mu, sd):
     """mu, sd = expected log return and its swing size over the whole horizon -> [p10, p50, p90]."""

@@ -193,6 +193,7 @@ class TiRex(Model):
 
 class Kronos(Model):
     kind = "pretrained"
+    chunk_days = 16   # ~1 minute of work per chunk: a stopped run loses little
     about = "Pretrained on candles from 45 stock exchanges (Kronos), zero shot. Draws possible futures and counts them."
 
     def __init__(self, horizon, cfg):

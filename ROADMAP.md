@@ -25,6 +25,10 @@ What's done, what's next. Tick a box (`[x]`) when it's done. The order inside "N
 - [x] Changed old prices only redo forecasts from the first changed month, not the whole history
 - [x] Only the project's `venv/` can run it (`core/env.py`), also from the dashboard
 - [x] README with the flow, setup and models; `.gitignore` for venvs, secrets, editor files
+- [x] Battle runs one model at a time on all assets, then frees its memory (no 8 big networks in RAM at once)
+- [x] tqdm progress bar per model and asset; progress saved at least every minute (Kronos in small chunks)
+- [x] Dividend rescales (SPY, QQQ, TLT) no longer redo whole histories: months are compared by daily moves
+- [x] `python main.py 4 --fresh` really starts the battle from scratch (it was ignored before)
 
 ## Now
 - [ ] Finish the battle run with all 19 models (Kronos ~1-2 h, Time-MoE ~2.5 h), then steps 5-6

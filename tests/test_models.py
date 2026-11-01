@@ -9,6 +9,7 @@ import settings
 from core import battle
 from core.contracts import Model
 from core.plugins import load_file, load_players
+from core.timeline import Timeline
 
 synthetic = load_file(Path(__file__).with_name("synthetic.py"))
 
@@ -129,3 +130,10 @@ def test_cache_redoes_only_from_the_first_changed_month():
     first_changed = cal[cal > cutoff][0]
     assert cut == pd.Timestamp(first_changed.strftime("%Y-%m-01")), f"redo from {cut}, expected {first_changed}"
     assert battle.first_changed_day(old, battle.month_hashes(tl, ["asset0"], end, macro=True)) is None
+    # a dividend: Yahoo multiplies every price before it by the same factor, the moves stay the same
+    b = tl.view(end).bars("asset0")
+    div = b.index[2000]
+    b.loc[b.index < div, ["open_eur", "close_eur"]] *= 0.99
+    rescaled = Timeline({**{a: tl.view(end).bars(a) for a in tl.assets}, "asset0": b}, tl.extras())
+    cut = battle.first_changed_day(old, battle.month_hashes(rescaled, ["asset0"], end, macro=True))
+    assert cut == pd.Timestamp(div.strftime("%Y-%m-01")), f"a dividend in {div.date()} should only redo its month, got {cut}"
