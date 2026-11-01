@@ -1,0 +1,96 @@
+time,step,status,seconds,summary
+2026-10-09T17:27:28,01_data,ok,3.3,{'yahoo_prices': 'ok'}
+2026-10-09T17:28:21,02_features,ok,0.4,"{'price_features': 'ok', 'situations': 'ok'}"
+2026-10-09T17:30:24,03_training,ok,23.4,"{'gbm': {'checkpoints': 21, 'new': 21}}"
+2026-10-09T17:31:38,04_models,ok,51.1,{'no_future': True}
+2026-10-09T17:48:19,04_models,ok,988.2,"{'models': 13, 'leader': 'history_range'}"
+2026-10-09T18:05:08,04_models,ok,40.0,"{'models': 13, 'leader': 'history_range'}"
+2026-10-09T18:37:37,01_data,ok,3.3,{'yahoo_prices': 'ok'}
+2026-10-09T18:37:37,02_features,ok,0.4,"{'price_features': 'ok', 'situations': 'ok'}"
+2026-10-09T18:37:37,03_training,ok,0.0,"{'gbm': {'checkpoints': 21, 'new': 0}}"
+2026-10-09T18:54:26,04_models,ok,1008.8,"{'models': 13, 'leader': 'history_range'}"
+2026-10-09T18:54:30,05_selection,ok,4.5,{'selectors': 4}
+2026-10-09T18:54:31,06_strategies,ok,0.4,{'strategies': 6}
+2026-10-09T19:06:12,01_data,ok,3.4,{'yahoo_prices': 'ok'}
+2026-10-09T19:06:13,02_features,ok,0.4,"{'price_features': 'ok', 'situations': 'ok'}"
+2026-10-09T19:06:13,03_training,ok,0.0,"{'gbm': {'checkpoints': 21, 'new': 0}}"
+2026-10-09T19:19:16,04_models,ok,783.6,"{'models': 13, 'leader': 'history_range'}"
+2026-10-09T19:19:21,05_selection,ok,4.3,{'selectors': 4}
+2026-10-09T19:19:21,06_strategies,ok,0.4,{'strategies': 6}
+2026-10-09T19:45:07,01_data,ok,8.7,{'yahoo_prices': 'ok'}
+2026-10-09T19:45:07,02_features,ok,0.5,"{'price_features': 'ok', 'situations': 'ok'}"
+2026-10-09T19:45:49,03_training,ok,42.1,"{'gbm': {'checkpoints': 21, 'new': 21}}"
+2026-10-09T19:51:41,04_models,stopped,351.1,
+2026-10-09T19:51:49,01_data,ok,7.3,{'yahoo_prices': 'ok'}
+2026-10-09T19:52:20,02_features,ok,0.5,"{'price_features': 'ok', 'situations': 'ok'}"
+2026-10-09T19:52:20,03_training,ok,0.1,"{'gbm': {'checkpoints': 21, 'new': 0}}"
+2026-10-09T20:06:16,04_models,ok,835.5,"{'models': 13, 'leader': 'gbm'}"
+2026-10-09T20:06:20,05_selection,ok,4.4,{'selectors': 4}
+2026-10-09T20:06:21,06_strategies,ok,0.5,{'strategies': 6}
+2026-10-09T21:04:24,01_data,ok,157.7,"{'fred_macro': 'ok', 'yahoo_prices': 'ok'}"
+2026-10-09T21:04:24,02_features,ok,0.5,"{'macro_features': 'ok', 'price_features': 'ok', 'situations': 'ok'}"
+2026-10-09T21:07:28,03_training,ok,183.4,"{'gbm': {'checkpoints': 21, 'new': 21}, 'linear': {'checkpoints': 21, 'new': 21}}"
+2026-10-09T21:44:56,04_models,ok,2248.1,"{'models': 15, 'leader': 'gbm'}"
+2026-10-09T21:45:00,05_selection,ok,4.1,{'selectors': 4}
+2026-10-09T21:45:00,06_strategies,ok,0.4,{'strategies': 6}
+2026-10-09T21:45:01,07_judge,ok,0.0,{'verdict': 'warn'}
+2026-10-10T14:13:53,01_data,ok,17.3,"{'fred_macro': 'ok', 'yahoo_macro': 'ok', 'yahoo_prices': 'ok'}"
+2026-10-10T14:14:09,02_features,ok,0.6,"{'macro_features': 'ok', 'price_features': 'ok', 'situations': 'ok'}"
+2026-10-10T14:14:13,03_training,"error: 
+All the 48 fits failed.
+It is very likely that your model is misconfigured.
+You can try to debug the error by setting error_score='raise'.
+
+Below are more details about the failures:
+--------------------------------------------------------------------------------
+48 fits failed with the following error:
+Traceback (most recent call last):
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/sklearn/model_selection/_validation.py"", line 855, in _fit_and_score
+    estimator.fit(X_train, y_train, **fit_params)
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/sklearn/base.py"", line 1403, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/sklearn/ensemble/_hist_gradient_boosting/gradient_boosting.py"", line 603, in fit
+    X_binned_train = self._bin_data(
+                     ^^^^^^^^^^^^^^^
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/sklearn/ensemble/_hist_gradient_boosting/gradient_boosting.py"", line 1122, in _bin_data
+    X_binned = self._bin_mapper.fit_transform(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/sklearn/utils/_set_output.py"", line 327, in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/sklearn/base.py"", line 969, in fit_transform
+    return self.fit(X, **fit_params).transform(X)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/sklearn/ensemble/_hist_gradient_boosting/binning.py"", line 287, in fit
+    non_cat_thresholds = Parallel(n_jobs=self.n_threads, backend=""threading"")(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/sklearn/utils/parallel.py"", line 91, in __call__
+    return super().__call__(iterable_with_config_and_warning_filters)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/joblib/parallel.py"", line 2012, in __call__
+    return output if self.return_generator else list(output)
+                                                ^^^^^^^^^^^^
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/joblib/parallel.py"", line 1940, in _get_sequential_output
+    res = func(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/sklearn/utils/parallel.py"", line 184, in __call__
+    return self.function(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/sklearn/ensemble/_hist_gradient_boosting/binning.py"", line 82, in _find_binning_thresholds
+    bin_thresholds = sliding_window_view(distinct_values, 2).mean(axis=1)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File ""/Users/gin/GitHub/Gin/Stock_pipeline/v2/cenv/lib/python3.12/site-packages/numpy/lib/_stride_tricks_impl.py"", line 439, in sliding_window_view
+    raise ValueError(
+ValueError: window shape cannot be larger than input array shape
+",4.6,
+2026-10-10T14:30:34,03_training,ok,313.6,"{'gbm': {'checkpoints': 21, 'new': 21}, 'linear': {'checkpoints': 21, 'new': 21}}"
+2026-10-10T14:46:51,04_models,ok,977.1,"{'models': 15, 'leader': 'gbm'}"
+2026-10-10T14:46:56,05_selection,ok,5.5,{'selectors': 5}
+2026-10-10T14:46:57,06_strategies,ok,0.4,{'strategies': 7}
+2026-10-10T14:46:57,07_judge,ok,0.1,{'verdict': 'good'}
+2026-10-10T16:57:16,08_notify,ok,4.1,{'email_report': 'not sent: nothing matches settings.NOTIFY this month'}
+2026-10-10T17:21:37,08_notify,ok,3.9,{'email_report': 'not sent: nothing matches settings.NOTIFY this month'}
+2026-11-01T13:22:29,01_data,error: No module named 'yfinance',2.1,
+2026-11-01T14:01:32,01_data,ok,19.0,"{'fred_macro': 'ok', 'yahoo_macro': 'ok', 'yahoo_prices': 'ok'}"
+2026-11-01T14:06:23,02_features,ok,0.7,"{'macro_features': 'ok', 'price_features': 'ok', 'situations': 'ok'}"

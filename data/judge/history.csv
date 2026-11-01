@@ -1,0 +1,19 @@
+time,area,level,text
+2026-10-09T21:45:00,Data,warn,"No macro data (FRED). Your own models are missing interest rates, dollar and VIX."
+2026-10-09T21:45:00,Data,good,This month's decision is there (2026-10-01).
+2026-10-09T21:45:00,Live record,info,"1 live month(s) recorded, from 2026-10 to 2026-10."
+2026-10-09T21:45:00,Live record,info,Rule for real money: at least 12 live months that beat the base plan. 11 to go.
+2026-10-09T21:45:00,Models,good,Passes every pass mark: gbm. Confirm it in the holdout before trusting it.
+2026-10-09T21:45:00,Strategies,info,"Suggestion: risk_balanced (follows base_plan): +8.1% per year, worst drop -9%, Sharpe 1.05, fees EUR 8."
+2026-10-09T21:45:00,Strategies,info,"It makes less per year than buy & hold (+10.0%) but with smaller drops: a calmer ride, not more money."
+2026-10-09T21:45:00,Strategies,info,"The suggestion uses no forecasts for direction, only the plan (and maybe the range)."
+2026-10-09T21:45:00,Strategies,info,"The holdout is still closed. Open it once, when everything is final: python main.py 4-6 --holdout"
+2026-10-10T14:46:57,Data,good,This month's decision is there (2026-10-01).
+2026-10-10T14:46:57,Data,good,All prices are fresh.
+2026-10-10T14:46:57,Live record,info,"1 live month(s) recorded, from 2026-10 to 2026-10."
+2026-10-10T14:46:57,Live record,info,Rule for real money: at least 12 live months that beat the base plan. 11 to go.
+2026-10-10T14:46:57,Models,good,Passes every pass mark: gbm. Confirm it in the holdout before trusting it.
+2026-10-10T14:46:57,Strategies,info,"Suggestion: risk_balanced (follows base_plan): +8.1% per year, worst drop -9%, Sharpe 1.05, fees EUR 8."
+2026-10-10T14:46:57,Strategies,info,"It makes less per year than buy & hold (+10.0%) but with smaller drops: a calmer ride, not more money."
+2026-10-10T14:46:57,Strategies,info,"The suggestion uses no forecasts for direction, only the plan (and maybe the range)."
+2026-10-10T14:46:57,Strategies,info,"The holdout is still closed. Open it once, when everything is final: python main.py 4-6 --holdout"

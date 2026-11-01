@@ -1,0 +1,43 @@
+strategy,asset,share,eur,why
+buy_and_hold,aex,0.16666666666666666,166.66666666666666,"buy once, hold"
+buy_and_hold,bonds,0.16666666666666666,166.66666666666666,"buy once, hold"
+buy_and_hold,gold,0.16666666666666666,166.66666666666666,"buy once, hold"
+buy_and_hold,nasdaq,0.16666666666666666,166.66666666666666,"buy once, hold"
+buy_and_hold,silver,0.16666666666666666,166.66666666666666,"buy once, hold"
+buy_and_hold,sp500,0.16666666666666666,166.66666666666666,"buy once, hold"
+cppi_floor,aex,0.075,75.0,"floor EUR 850, risk 45% of fund | no trusted model: base"
+cppi_floor,bonds,0.075,75.0,"floor EUR 850, risk 45% of fund | no trusted model: base"
+cppi_floor,gold,0.075,75.0,"floor EUR 850, risk 45% of fund | no trusted model: base"
+cppi_floor,nasdaq,0.075,75.0,"floor EUR 850, risk 45% of fund | no trusted model: base"
+cppi_floor,silver,0.075,75.0,"floor EUR 850, risk 45% of fund | no trusted model: base"
+cppi_floor,sp500,0.075,75.0,"floor EUR 850, risk 45% of fund | no trusted model: base"
+fixed_mix,aex,0.13333333333333333,133.33333333333334,keep 13%
+fixed_mix,bonds,0.13333333333333333,133.33333333333334,keep 13%
+fixed_mix,gold,0.13333333333333333,133.33333333333334,keep 13%
+fixed_mix,nasdaq,0.13333333333333333,133.33333333333334,keep 13%
+fixed_mix,silver,0.13333333333333333,133.33333333333334,keep 13%
+fixed_mix,sp500,0.13333333333333333,133.33333333333334,keep 13%
+follow_bandit,aex,0.15,150.0,chronos_base expects +1.2%: more
+follow_bandit,bonds,0.09999999999999999,99.99999999999999,"expects +0.0%: too small, base"
+follow_bandit,gold,0.09999999999999999,99.99999999999999,"expects -0.9%: too small, base"
+follow_bandit,nasdaq,0.09999999999999999,99.99999999999999,"expects +0.7%: too small, base"
+follow_bandit,silver,0.049999999999999996,49.99999999999999,chronos_base expects -2.5%: less
+follow_bandit,sp500,0.15,150.0,chronos_base expects +1.3%: more
+follow_best,aex,0.09999999999999999,99.99999999999999,no trusted model: base
+follow_best,bonds,0.09999999999999999,99.99999999999999,no trusted model: base
+follow_best,gold,0.09999999999999999,99.99999999999999,no trusted model: base
+follow_best,nasdaq,0.09999999999999999,99.99999999999999,no trusted model: base
+follow_best,silver,0.09999999999999999,99.99999999999999,no trusted model: base
+follow_best,sp500,0.09999999999999999,99.99999999999999,no trusted model: base
+follow_overall,aex,0.15,150.0,history_range expects +1.1%: more
+follow_overall,bonds,0.09999999999999999,99.99999999999999,"expects -0.4%: too small, base"
+follow_overall,gold,0.15,150.0,history_range expects +1.8%: more
+follow_overall,nasdaq,0.15,150.0,history_range expects +1.9%: more
+follow_overall,silver,0.15,150.0,history_range expects +2.3%: more
+follow_overall,sp500,0.15,150.0,history_range expects +1.7%: more
+risk_balanced,aex,0.18398045573719357,183.98045573719358,range 9% wide: 18%
+risk_balanced,bonds,0.20916868996310276,209.16868996310276,range 8% wide: 21%
+risk_balanced,gold,0.08325383984868015,83.25383984868014,range 21% wide: 8%
+risk_balanced,nasdaq,0.11653601713362441,116.53601713362441,range 15% wide: 12%
+risk_balanced,silver,0.034387960120639084,34.387960120639086,range 50% wide: 3%
+risk_balanced,sp500,0.1726730371967601,172.6730371967601,range 10% wide: 17%

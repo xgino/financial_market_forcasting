@@ -1,0 +1,13 @@
+{
+ "settings": "0600728427ad73f9",
+ "assets": [
+  "aex",
+  "bonds",
+  "gold",
+  "nasdaq",
+  "silver",
+  "sp500"
+ ],
+ "until": "2026-10-09",
+ "data": "8646291d63316588"
+}
