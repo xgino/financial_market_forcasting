@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/moirai_2.py
+# financial_market_forcasting1/04_models/moirai_2.py
 """Salesforce Moirai 2.0 small (11M), pretrained. Tiny, quantile forecasts, runs on the CPU (needs float64)."""
 SETTINGS = {
     "enabled": True,

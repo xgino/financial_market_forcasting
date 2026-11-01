@@ -1,4 +1,4 @@
-# paper-fund-v2/07_judge/data_check.py
+# financial_market_forcasting1/07_judge/data_check.py
 """Is the data fresh, is the macro data there, is a monthly update due?"""
 SETTINGS = {"enabled": True, "stale_days": 7}
 

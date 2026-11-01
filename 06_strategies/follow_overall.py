@@ -1,4 +1,4 @@
-# paper-fund-v2/06_strategies/follow_overall.py
+# financial_market_forcasting1/06_strategies/follow_overall.py
 """Base 60% plus or minus a 30% tilt, following the model trusted most over all situations (best_overall).
 This is the money test for a model like gbm: does following it actually beat the base plan after costs?"""
 SETTINGS = {"enabled": True, "follow": "best_overall", "base": 0.6, "tilt": 0.3, "min_edge": 0.005}

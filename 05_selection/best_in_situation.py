@@ -1,4 +1,4 @@
-# paper-fund-v2/05_selection/best_in_situation.py
+# financial_market_forcasting1/05_selection/best_in_situation.py
 """Follows the model the skill book trusts most for TODAY'S situation (only results known today count).
 No model trusted yet = base plan. Trusted = settings.MIN_TRUST with settings.MIN_PERIODS."""
 SETTINGS = {"enabled": True}

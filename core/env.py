@@ -1,4 +1,4 @@
-# paper-fund-v2/core/env.py
+# financial_market_forcasting1/core/env.py
 """
 Only the project's own venv (venv/ next to main.py) may run this project. Another Python (Anaconda, the
 system one) has other package versions and gives errors that are hard to trace, so it is stopped with a

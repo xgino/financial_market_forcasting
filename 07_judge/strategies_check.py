@@ -1,4 +1,4 @@
-# paper-fund-v2/07_judge/strategies_check.py
+# financial_market_forcasting1/07_judge/strategies_check.py
 """Which strategy is the suggestion, does it pass its marks, and how did the holdout go (if opened)?"""
 SETTINGS = {"enabled": True}
 

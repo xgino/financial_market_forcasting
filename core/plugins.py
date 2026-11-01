@@ -1,4 +1,4 @@
-# paper-fund-v2/core/plugins.py
+# financial_market_forcasting1/core/plugins.py
 """
 Loads a step folder. In every step folder:
   files starting with _  run the folder (_step.py is the step itself)

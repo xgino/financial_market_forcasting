@@ -1,4 +1,4 @@
-# paper-fund-v2/core/battle.py
+# financial_market_forcasting1/core/battle.py
 """
 The battle: every model forecasts every trading day as if live, and gets scored once the 20 days are over.
 
@@ -23,12 +23,18 @@ from tqdm import tqdm
 import settings
 from core import metrics, store
 from core.situations import regime_table
+from core.stretches import stretch_table
 from core.timeline import Timeline
 
 COLS = ["p10", "p50", "p90"]
 
 
 # ---------- forecasts ----------
+
+def horizon_name(name, horizon):
+    """journal / skillbook / leaderboard file names: the main horizon keeps the plain name, others get _h<n>."""
+    return name if horizon in (None, settings.HORIZON_DAYS) else f"{name}_h{horizon}"
+
 
 SAVE_EVERY = 60   # seconds: forecasts are saved at least this often, so a stopped run loses at most ~1 minute
 
@@ -80,7 +86,7 @@ def forecast_history(model, tl, asset, fresh=False, progress=True):
     changed settings mean everything again, changed old prices only from the first changed month.
     fresh=True ignores what's saved and replaces it."""
     days = eligible_days(tl, asset, model)
-    p = store.path("forecasts", asset, f"{model.run_name}.csv")
+    p = store.path("forecasts", asset, f"{model.cache_name}.csv")
     used = assets_used(model, tl, asset)
     settings_key = store.fingerprint(type(model).__name__, model.horizon, model.cache_settings())
     macro = getattr(model, "uses_macro", False)
@@ -136,6 +142,7 @@ def forecast_all(models, tl, fresh=False, progress=True):
     freed (model.unload) before the next one loads, so only one big model is ever in memory.
     Returns {(run, asset): forecasts}."""
     out = {}
+    models = dict(sorted(models.items(), key=lambda x: x[1].kind == "stack"))   # judges last: they read the others
     for i, (run, model) in enumerate(models.items(), 1):
         if progress:
             print(f"[{i}/{len(models)}] {run}")
@@ -147,8 +154,8 @@ def forecast_all(models, tl, fresh=False, progress=True):
     return out
 
 
-def build_journal(models, tl, fresh=False, progress=True):
-    h = settings.HORIZON_DAYS
+def build_journal(models, tl, fresh=False, progress=True, horizon=None):
+    h = horizon or settings.HORIZON_DAYS
     forecasts = forecast_all(models, tl, fresh=fresh, progress=progress)
     parts = []
     for asset in tl.assets:
@@ -157,13 +164,14 @@ def build_journal(models, tl, fresh=False, progress=True):
         end_date = pd.Series(days, index=days).shift(-h)     # the day its 20 days are over
         actual = closes.shift(-h) / closes - 1                # what really happened (scoring only)
         situation = regime_table(closes)                      # past only
+        stretch = stretch_table(closes)["stretch"]            # past only: the stretch as known that day
         for run, model in models.items():
             fc = forecasts[run, asset].dropna(subset=["p50"])
             d = fc.index
             cutoff = pd.Timestamp(str(model.seen_until)) if model.seen_until else None
             parts.append(pd.DataFrame({
                 "date": d, "end_date": end_date.reindex(d).to_numpy(), "asset": asset, "model": run,
-                "kind": model.kind, "situation": situation.reindex(d).to_numpy(),
+                "kind": model.kind, "situation": situation.reindex(d).to_numpy(), "stretch": stretch.reindex(d).to_numpy(),
                 "price": closes.reindex(d).to_numpy(),
                 "p10": fc["p10"].to_numpy(), "p50": fc["p50"].to_numpy(), "p90": fc["p90"].to_numpy(),
                 "actual": actual.reindex(d).to_numpy(),
@@ -191,19 +199,24 @@ def dev_window(journal):
 
 # ---------- skill book: month by month, only what was known then ----------
 
-SKILL = ["periods", "ic", "trust", "direction", "always_up", "edge", "skill", "range_hit"]
+BOOK_VERSION = 3   # 2: rows per asset and situation (core/pooling.py), 3: stretches. Change it = rebuilt
+BOOK_INPUTS = ["date", "asset", "model", "p10", "p50", "p90", "actual", "situation"]
+SKILL = ["periods", "ic", "trust", "direction", "always_up", "edge", "skill", "range_hit",
+         "warn_periods", "warn_hit", "warn_base", "warn_edge", "warn_trust", "warn_move",
+         "rise_periods", "rise_hit", "rise_base", "rise_edge", "rise_trust", "rise_move"]
 
 
-def skillbook(journal, tl, progress=True):
-    h = settings.HORIZON_DAYS
+def skillbook(journal, tl, progress=True, horizon=None):
+    """horizon None = the main one (skillbook.csv); else skillbook_h<horizon>.csv."""
+    h = horizon or settings.HORIZON_DAYS
     rows = known(journal).sort_values(["end_date", "asset", "model", "date"]).reset_index(drop=True)
-    p = store.path("battle", "skillbook.csv")
+    p = store.path("battle", horizon_name("skillbook", h) + ".csv")
     months = tl.month_starts(rows["end_date"].min(), tl.calendar()[-1])
     old, start_after = None, None
     if p.exists():
         m = store.read_meta(p)
-        if m.get("until") and m.get("inputs") == store.fingerprint(
-                rows[rows["end_date"] <= pd.Timestamp(m["until"])][["date", "asset", "model", "p10", "p50", "p90", "actual", "situation"]]):
+        if m.get("until") and m.get("columns") == SKILL and m.get("version") == BOOK_VERSION and m.get("inputs") == store.fingerprint(
+                rows[rows["end_date"] <= pd.Timestamp(m["until"])][BOOK_INPUTS + (["stretch"] if "stretch" in rows else [])]):
             old, start_after = store.read_csv(p, dates=("as_of",)), pd.Timestamp(m["until"])
         elif progress:
             print("  skill book: inputs changed, building it again")
@@ -212,8 +225,8 @@ def skillbook(journal, tl, progress=True):
     book = pd.concat([old, new], ignore_index=True) if old is not None else new
     if len(todo):
         until = todo[-1]
-        store.write_csv(book, p, {"until": str(until.date()), "inputs": store.fingerprint(
-            rows[rows["end_date"] <= until][["date", "asset", "model", "p10", "p50", "p90", "actual", "situation"]])},
+        store.write_csv(book, p, {"until": str(until.date()), "columns": SKILL, "version": BOOK_VERSION, "inputs": store.fingerprint(
+            rows[rows["end_date"] <= until][BOOK_INPUTS + (["stretch"] if "stretch" in rows else [])])},
             index=False)
     return book
 
@@ -223,9 +236,16 @@ def _snapshots(rows, months, h, progress):
     arr = {c: rows[c].to_numpy() for c in ("p10", "p50", "p90", "actual")}
     df = pd.DataFrame({"model": rows["model"].to_numpy(), "situation": rows["situation"].fillna("unknown").to_numpy(),
                        "asset": rows["asset"].to_numpy()})
-    groups = [(r, "all", "all", np.sort(i)) for r, i in df.groupby("model").indices.items()]
-    groups += [(r, g, "all", np.sort(i)) for (r, g), i in df.groupby(["model", "situation"]).indices.items() if g != "unknown"]
-    groups += [(r, "all", a, np.sort(i)) for (r, a), i in df.groupby(["model", "asset"]).indices.items()]
+    if "stretch" in rows:   # stretches go in the same column, as "stretch:<kind>" (core/stretches.py)
+        st = ("stretch:" + rows["stretch"].astype(str)).where(rows["stretch"].notna(), "unknown").to_numpy()
+        df = pd.concat([df, df.assign(situation=st)], keys=[0, 1]).reset_index(level=0, drop=True)
+    first = df.iloc[:len(rows)]   # every forecast once (the second copy only relabels it by stretch)
+    groups = [(r, "all", "all", np.sort(i)) for r, i in first.groupby("model").indices.items()]
+    n_rows = len(rows)   # positions in the stretch copy map back to the same forecast (each label is in one copy)
+    groups += [(r, g, "all", np.sort(i % n_rows)) for (r, g), i in df.groupby(["model", "situation"]).indices.items() if g != "unknown"]
+    groups += [(r, "all", a, np.sort(i)) for (r, a), i in first.groupby(["model", "asset"]).indices.items()]
+    groups += [(r, g, a, np.sort(i % n_rows)) for (r, g, a), i in df.groupby(["model", "situation", "asset"]).indices.items()
+               if g != "unknown"]   # per asset AND situation: core/pooling.py combines these per asset
     out = []
     for k, d in enumerate(months):
         n = int(np.searchsorted(end, np.datetime64(d), side="right"))  # results known on d
@@ -258,6 +278,9 @@ def verdict(r):
         v = "maybe, could still be luck"
     else:
         v = "no proven edge"
+    if r.get("kind") == "stack" and pd.notna(r.get("best_single_ic")):
+        v += (f" | beats the best single model (IC {r['ic']:+.3f} vs {r['best_single_ic']:+.3f})" if r["ic"] > r["best_single_ic"]
+              else f" | does NOT beat the best single model (IC {r['ic']:+.3f} vs {r['best_single_ic']:+.3f})")
     if r["range_hit"] < 0.7:
         v += " | range too narrow"
     elif r["range_hit"] > 0.9:
@@ -265,19 +288,25 @@ def verdict(r):
     return v
 
 
-def leaderboard(journal, models):
-    h = settings.HORIZON_DAYS
+def leaderboard(journal, models, horizon=None):
+    h = horizon or settings.HORIZON_DAYS
     rows = known(dev_window(journal))
     if rows.empty:
         return pd.DataFrame()
     t = metrics.score_table(rows, ["model"], h)
     years = metrics.ic_by_year(rows.rename(columns={"model": "run"}))
     boot = metrics.bootstrap(rows.rename(columns={"model": "run"}))
-    luck = metrics.luck_test(rows.rename(columns={"model": "run"}))
+    shift = max(60, 2 * h)   # luck shifts results further than a forecast overlaps with itself
+    luck = metrics.luck_test(rows.rename(columns={"model": "run"}), min_shift=shift)
     t["years_positive"] = years["positive"].reindex(t.index)
     t["chunks_low"] = boot["low_5"].reindex(t.index)
     t["luck_beats_it"] = luck["luck_chance"].reindex(t.index)
+    for kind in ("warn", "rise"):   # the warning record gets its own luck test
+        cl = metrics.call_luck_test(rows.rename(columns={"model": "run"}), kind, min_shift=shift)
+        t[f"{kind}_luck"] = cl["luck_chance"].reindex(t.index) if len(cl) else np.nan
     t["kind"] = [models[m].kind if m in models else "" for m in t.index]
+    singles = t[(t["kind"] != "stack") & ~t.index.isin(settings.EXCLUDE)]["ic"]
+    t["best_single_ic"] = singles.max() if singles.notna().any() else np.nan
     t["verdict"] = [verdict(r) for _, r in t.iterrows()]
     t = t.sort_values(["ic"], ascending=False, na_position="last")
     t.insert(0, "rank", range(1, len(t) + 1))

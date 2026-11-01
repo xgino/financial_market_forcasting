@@ -1,4 +1,4 @@
-# paper-fund-v2/01_data/yahoo_macro.py
+# financial_market_forcasting1/01_data/yahoo_macro.py
 """
 Back-up for the macro data when FRED doesn't answer: the same kind of information from Yahoo.
 Only fills in what FRED didn't deliver today (a missing or old file), so FRED stays the first choice.

@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/linear.py
+# financial_market_forcasting1/04_models/linear.py
 """Your own simple model: ridge regression trained in 03_training/linear.py. Predicts the move in units of
 the asset's own swings, then turns it back into a % for this asset."""
 SETTINGS = {"enabled": True}

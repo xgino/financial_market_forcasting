@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/theta.py
+# financial_market_forcasting1/04_models/theta.py
 """Classic statistics from the statsforecast library (the Theta method), fitted fresh every day on the last
 year of log prices. Strong in forecasting competitions; on market prices often close to naive.
 Install: pip install statsforecast"""

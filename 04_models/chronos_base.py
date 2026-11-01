@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/chronos_base.py
+# financial_market_forcasting1/04_models/chronos_base.py
 """Amazon Chronos-Bolt base (205M), pretrained. Memory test 2026-10: IC +0.54 on 2010-2018 but -0.04 on
 2025-2026, so it remembered old prices. seen_until keeps those years from counting for trust."""
 SETTINGS = {

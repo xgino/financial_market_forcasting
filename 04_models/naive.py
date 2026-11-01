@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/naive.py
+# financial_market_forcasting1/04_models/naive.py
 """No change: the middle guess is always 0% (today's price). The range comes from last year's swings
 on a bell curve. It knows nothing about direction on purpose: every other model has to beat it."""
 SETTINGS = {"enabled": True, "lookback": 252}

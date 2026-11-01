@@ -1,4 +1,4 @@
-# paper-fund-v2/07_judge/live_check.py
+# financial_market_forcasting1/07_judge/live_check.py
 """The live record: how many months, how it did against the base plan, and the rule for real money."""
 SETTINGS = {"enabled": True, "base": "fixed_mix"}
 

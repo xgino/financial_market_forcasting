@@ -1,4 +1,4 @@
-# paper-fund-v2/05_selection/best_overall.py
+# financial_market_forcasting1/05_selection/best_overall.py
 """Follows the model the skill book trusts most over ALL situations together (only results known today).
 Per situation the results get split into 6 boxes, which makes trust slow to earn. Overall, a model with a
 steady small edge (like gbm) can earn trust sooner. No model trusted overall = base plan."""

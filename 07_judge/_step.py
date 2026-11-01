@@ -1,4 +1,4 @@
-# paper-fund-v2/07_judge/_step.py
+# financial_market_forcasting1/07_judge/_step.py
 """
 Step 7, the judge. Every check in this folder looks at one area and writes plain sentences.
 Saves data/judge/report.md (read it in the dashboard, page Judge) and adds every finding to

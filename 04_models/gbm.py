@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/gbm.py
+# financial_market_forcasting1/04_models/gbm.py
 """Your own model: gradient boosting trained in 03_training/gbm.py (price + macro features, all assets).
 Uses the newest checkpoint from before each day, so it only knows what was known then."""
 SETTINGS = {"enabled": True}

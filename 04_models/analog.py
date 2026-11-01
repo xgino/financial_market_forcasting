@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/analog.py
+# financial_market_forcasting1/04_models/analog.py
 """Pattern matching (analog forecasting): finds the past moments whose last 60 days looked most like
 now (all assets if pool is on), and uses what happened in the 20 days after them.
 Only past moments whose 20 days had already ENDED by today are used."""

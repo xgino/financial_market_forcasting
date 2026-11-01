@@ -1,4 +1,4 @@
-# paper-fund-v2/02_features/_step.py
+# financial_market_forcasting1/02_features/_step.py
 """Step 2: every feature maker in this folder turns the prices into features, saved as CSV."""
 from pathlib import Path
 

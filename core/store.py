@@ -1,4 +1,4 @@
-# paper-fund-v2/core/store.py
+# financial_market_forcasting1/core/store.py
 """
 Where everything is saved: plain CSV files in data/, so you can open any of them in Excel or VS Code.
 

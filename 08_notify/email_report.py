@@ -1,4 +1,4 @@
-# paper-fund-v2/08_notify/email_report.py
+# financial_market_forcasting1/08_notify/email_report.py
 """
 Mails you once a month, only when it matters: for the assets in settings.NOTIFY["assets"], only when the
 call is in settings.NOTIFY["only_when"] (default: BUY) with at least the minimum confidence.
@@ -99,7 +99,7 @@ class EmailReport(Notifier):
             if v["call"] in cfg["only_when"] and v["confidence"] >= cfg["min_confidence"] and (not already or args.fresh):
                 mail_assets.append(a)
         last = max(store.read_prices(a).index.max() for a in settings.ASSETS)
-        body = (f"<div style='font-family:sans-serif;max-width:640px'><h1>Paper fund, {pd.Period(month).strftime("%B %Y")}</h1>"
+        body = (f"<div style='font-family:sans-serif;max-width:640px'><h1>financial_market_forcasting1, {pd.Period(month).strftime("%B %Y")}</h1>"
                 + "".join(blocks) +
                 f"<p style='color:#777;font-size:13px'>Prices up to {last.date()} (Yahoo Finance), forecasts made with only what was "
                 f"known on the decision day. This is a test lab with virtual money, not financial advice. "
@@ -114,7 +114,7 @@ class EmailReport(Notifier):
             report["mail"] = "not sent: no secrets.env yet (copy secrets.example.env)"
             return report
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"Paper fund: {', '.join(f'{a.upper()} {calls[a]}' for a in mail_assets)}"
+        msg["Subject"] = f"financial_market_forcasting1: {', '.join(f'{a.upper()} {calls[a]}' for a in mail_assets)}"
         msg["From"], msg["To"] = sec["SMTP_USER"], sec.get("MAIL_TO", sec["SMTP_USER"])
         msg.attach(MIMEText(body, "html"))
         with smtplib.SMTP_SSL(sec.get("SMTP_HOST", "smtp.gmail.com"), int(sec.get("SMTP_PORT", 465)),

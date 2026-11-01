@@ -1,4 +1,4 @@
-# paper-fund-v2/core/features.py
+# financial_market_forcasting1/core/features.py
 """
 Core, stage 1: features = simple numbers that describe the price line on a day.
 Every feature on day D only uses closes up to and including D (rolling windows look back, never ahead).

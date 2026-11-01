@@ -1,4 +1,4 @@
-# paper-fund-v2/06_strategies/fixed_mix.py
+# financial_market_forcasting1/06_strategies/fixed_mix.py
 """The base plan with money: always the same share invested (spread evenly), the rest cash, put back in
 balance once a month. No forecasts used at all."""
 SETTINGS = {"enabled": True, "follow": "base_plan", "invested": 0.8}

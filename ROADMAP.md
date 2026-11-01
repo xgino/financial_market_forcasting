@@ -37,44 +37,69 @@ What's done, what's next. Tick a box (`[x]`) when it's done. The order inside "N
 ## Next: better decisions from the same historical data
 
 ### 1. Score "is it a bad time to buy?" directly
-- [ ] New score per model: when it said "high chance of falling", how often did it really fall (and how much)?
-- [ ] Same for "high chance of rising": how often did it rise?
-- [ ] Put both in the skill book, per situation, with the same luck test as the other scores
-- [ ] WAIT on the Now page uses the models with the best warning record
-- [ ] Dashboard: warning record per model
+- [x] New score per model: when it said "fall" (middle guess below -0.5%), how often did it really fall, and how much lower than on any day? (`warn_*` in `core/metrics.py`)
+- [x] Same for "rise" (middle guess beats buy + sell costs): how often did it rise? (`rise_*`)
+- [x] Both in the skill book, per situation and per asset, month by month; trust = edge in units of luck (z ≥ 2); leaderboard adds a shift luck test
+- [x] WAIT on the Now page weighs fall votes by the warning record and needs a proven warner (`core/verdict.py`); BUY still uses IC trust
+- [x] Dashboard: warning record table on Leaderboard, a line per model on Models, the warner's record on Now when it says WAIT
+- [ ] After the full battle run: `python main.py 4-6` once more (forecasts are cached, only the skill book and leaderboard are rebuilt with the new columns)
+- [ ] Look at it: does any model warn better than luck on gold? Does WAIT avoid the bad months in the history replay ("past success of this call")?
 
 ### 2. Select on similar days instead of 6 fixed boxes
-- [ ] Describe each day with numbers: trend strength, swings now vs normal, last 20/60 day shape, real rate, dollar
-- [ ] For today: find the 100-200 most similar past days whose results were already known
-- [ ] Score every model only on those days, with the luck test (fewer days = higher bar)
-- [ ] New selector `best_in_similar_days`, next to `best_in_situation`, so the battle shows which works better
-- [ ] Test: similar days never include results that weren't known yet
+- [x] Describe each day with numbers: trend strength, swings now vs normal, last 20/60 day shape, distance from the 1 year high, real rate, dollar (`core/similar.py`)
+- [x] For today: the 150 most similar past days of that asset whose results were already known (scaled with past days only)
+- [x] Score every model only on those days: trust over independent 20 day periods (fewer/clustered days = higher bar) + a luck test that shuffles whole periods
+- [x] New selector `best_in_similar_days` next to `best_in_situation`, and strategy `follow_similar` next to `follow_best`, so steps 5 and 6 compare them
+- [x] Tests: similar days only have known results, garbage after the date changes nothing; the selection no-future test covers the new selector
+- [ ] After the full battle run: compare `best_in_similar_days` vs `best_in_situation` (step 5 scores) and `follow_similar` vs `follow_best` (step 6)
+- [ ] Try `days` 100 / 150 / 250 in its SETTINGS: does a smaller, closer set help or just add luck?
 
 ### 3. More evidence: pool related assets
-- [ ] Groups in settings: metals (gold, silver, platinum, gold miners), stocks, bonds, crypto
-- [ ] A model's record on the other assets in its group counts as extra evidence (weighted lower than its own)
-- [ ] Check: does pooling make the trust scores steadier from year to year, or just noisier?
+Found: trust was already pooled, over ALL assets equally (gold's trust counted Bitcoin's results as much as gold's).
+- [x] Groups in settings (`settings.GROUPS`): metals (gold, silver), stocks (sp500, nasdaq, aex), bonds, crypto
+- [x] Own asset counts fully, its group at half weight, other assets not (`settings.POOLS`, `settings.EVIDENCE = "group"`); periods add up weighted, so borrowed evidence raises trust less (`core/pooling.py`)
+- [x] Skill book has rows per asset and situation; selectors, the Now verdict and the email use the pooled record
+- [x] Check in step 4 (`data/battle/pooling.csv`, Leaderboard page): own / group / all, does trust on 1 January predict that year's IC, and how steady is it
+- [ ] After the full battle run: read the check and set `settings.EVIDENCE` to the pool that predicts best
+- [ ] Platinum and gold miners as traded (battled) assets, so metals has 4 members (costs ~2 more assets of battle time)
 
 ### 4. A judge model on top of the models (stacking)
-- [ ] Inputs: every model's forecast + today's situation numbers; output: what really happened
-- [ ] Trained walk-forward like 03_training (only finished results), as a new player in 04_models
-- [ ] It has to beat the best single model on the development years before it can be followed
+- [x] Inputs: every other model's middle guess, their average and spread, and the 7 similar-days numbers; output: the 20 day result (`core/stacking.py`, `04_models/judge.py`)
+- [x] Walk-forward: refit every month inside step 4 (its inputs only exist there), on all traded assets, only results that ended before that month; pretrained guesses up to `seen_until` count as "no opinion"
+- [x] Runs after every other model; its cache follows the other models' cache keys
+- [x] Followed (selectors) and voting (Now verdict) only while its record so far beats the best single model's record so far (`stack_ok`); the leaderboard says whether it beats the best on the development years
+- [x] Tests: no future (prices, macro and other models' forecasts after the date), memory years ignored, the beat-the-best gate
+- [ ] After the full battle run: does the judge beat the best single model? If it doesn't, try fewer inputs (only models with some trust) or a plainer learner (ridge)
 
 ### 5. More than one horizon
-- [ ] Forecast 5, 20 and 60 trading days ahead (now only `settings.HORIZON_DAYS = 20`)
-- [ ] Skill book per horizon: 5 days gives ~4x more results to score, 60 days fewer but bigger moves
-- [ ] "When to buy this week" from 5 days, "the direction this quarter" from 60 days
+- [x] `settings.HORIZONS = [5, 20, 60]`: step 4 battles every horizon; decisions and strategies stay on `HORIZON_DAYS = 20`
+- [x] Own journal, skill book (with the warning record) and leaderboard per horizon (`*_h5.csv`, `*_h60.csv`); forecasts cached as `<model>_h5.csv`; luck test shifts further for longer horizons
+- [x] Which models join: SETTINGS `horizons` (gbm and linear only 20: trained on 20 day results; Kronos and Time-MoE only 20: slow); the judge reads the same horizon's forecasts
+- [x] Dashboard: Now page "This week (5 days)" and "This quarter (60 days)" calls; Leaderboard page has a horizon picker
+- [x] Tests: who joins which horizon, no future on 5 and 60 days, a 5 day range is narrower than a 60 day one
+- [ ] After the full battle run: which models have skill on 5 or 60 days that they don't have on 20?
+- [ ] Train gbm and linear per horizon too (03_training on 5 and 60 day results)
+- [ ] If 5 days shows real skill: a weekly strategy (more trades, more fees: does it still win after costs?)
 
 ### 6. Pattern chunks instead of calendar chunks
-- [ ] Cut each price line into stretches where it behaved the same (change-point detection), only with data known then
-- [ ] Label stretches by shape and size (steady up, sharp drop, sideways, ...) and score models per kind
-- [ ] Compare with the 6 situations and with similar days (2): which explains model skill best?
+- [x] Cut each price line into stretches where it behaved the same: online change-point detection, a new stretch when the last 20 days' average move (z > 3) or swings (2x) differ from the stretch so far; a day's label is never revised (`core/stretches.py`, `settings.STRETCHES`)
+- [x] Label by shape and size against the asset's normal swings: up-steady, up-fast, down-steady, down-sharp, sideways-calm, sideways-wild; in the journal (`stretch`) and the situations files
+- [x] Skill book scores every model per stretch kind (`stretch:<kind>`, pooled per asset like the situations); selector `best_in_stretch`, strategy `follow_stretch`; Now page shows the stretch and since when
+- [x] Step 5 prints which grouping finds the model to follow best: none / situations / stretches / similar days (`data/selection/groupings.csv`)
+- [x] Tests: stretches never change when the future changes, stretch scores use the right forecasts and don't double count, selection no-future test covers `best_in_stretch`
+- [ ] After the full battle run: read the groupings table. A grouping only helps if it beats "no grouping" on IC and on "move when up vs all"
+- [ ] Tune `settings.STRETCHES` only on the development years (gold: 36 stretches since 2003, median ~100 days, sideways-wild 39%)
 
 ### 7. Fine-tune the pretrained models (last: slow, small expected gain)
-- [ ] Fine-tune Chronos-Bolt on your assets, walk-forward (checkpoint per year, only data up to its date)
-- [ ] Battle it against the zero-shot version
+- [x] Fine-tune Chronos-Bolt small on your training assets, walk-forward: a checkpoint per year from its release (2025-01-01, 2026-01-01), only windows whose 20 days ended before the cutoff, the last ~6 months held back for a check (`03_training/chronos_finetune.py`, ~2 min per checkpoint)
+- [x] Held-back check (Training page): 2025 fine-tuned 5.857 vs zero-shot 5.873 (0.3% better), 2026 4.478 vs 4.411 (1.5% worse)
+- [x] `chronos_small_ft` in the battle against `chronos_small` (same model, zero shot), from 2025 on; a year whose fine-tuning didn't help (known at its cutoff) uses the base model
+- [x] Weights (~190 MB each) kept out of git; `index.csv` stays in
+- [ ] After the battle re-run: does `chronos_small_ft` beat `chronos_small` on 2025-2026? (Few results yet: judge again in a year)
+- [ ] If it helps: fine-tune Chronos-2 with its built-in `fit()` (LoRA), same walk-forward
 
 ## Housekeeping
+- [ ] `python main.py 4 --only x` overwrites journal, leaderboard and skill book with only model x: merge into the full ones instead
 - [ ] Dashboard Run page: run steps in the background with a log file (clicking around now stops the live output and can hang the step)
 - [x] `data/` and `__pycache__/` stay in git on purpose
 - [ ] `tools/` (monthly reminder, backup) and `secrets.example.env` are mentioned in 07_judge and 08_notify, but missing

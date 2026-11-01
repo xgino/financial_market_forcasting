@@ -1,4 +1,4 @@
-# paper-fund-v2/core/training.py
+# financial_market_forcasting1/core/training.py
 """
 Shared training loop for your own models (03_training). Walk-forward: for every cutoff (1 January of each
 year) a fresh checkpoint is trained with ONLY results that had finished by that date. Tuning happens

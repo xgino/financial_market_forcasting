@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/timesfm.py
+# financial_market_forcasting1/04_models/timesfm.py
 """Google TimesFM 2.5 (200M), pretrained. A different company than Chronos: a second opinion."""
 SETTINGS = {
     "enabled": True,

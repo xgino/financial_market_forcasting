@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/garch.py
+# financial_market_forcasting1/04_models/garch.py
 """GARCH(1,1): the classic model for how wild the next weeks will be. Calm stretches and wild stretches
 come in clusters; GARCH follows that. It has no opinion on direction (middle 0%), it's for the RANGE:
 better sizing, not timing. Its settings are re-estimated once a year on the years before (past only).

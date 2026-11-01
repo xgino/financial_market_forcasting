@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/history_range.py
+# financial_market_forcasting1/04_models/history_range.py
 """No bell curve: bad, middle and good case read straight from real past 20 day results."""
 SETTINGS = {"enabled": True, "years": 3}
 CARD = {  # shown on the dashboard page Models

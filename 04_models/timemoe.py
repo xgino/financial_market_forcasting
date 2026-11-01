@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/timemoe.py
+# financial_market_forcasting1/04_models/timemoe.py
 """Time-MoE 200M (453M in total, mixture of experts), pretrained. Only a middle guess: the range is added from
 the last 60 days' swings. The 2.4B version from the paper was never published."""
 SETTINGS = {
@@ -8,6 +8,7 @@ SETTINGS = {
     "context_days": 512,
     "swing_days": 60,
     "seen_until": "2024-09-30",
+    "horizons": [20],             # slow: only the main horizon (add 5, 60 to battle those too)
 }
 CARD = {  # shown on the dashboard page Models
     "type": 'pretrained by the Time-MoE authors (zero shot, not fine-tuned)',

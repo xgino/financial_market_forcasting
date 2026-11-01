@@ -1,4 +1,4 @@
-# paper-fund-v2/core/timeline.py
+# financial_market_forcasting1/core/timeline.py
 """
 Core, stage 1: the ONLY way the rest of the system reads market data.
 

@@ -1,4 +1,4 @@
-# paper-fund-v2/core/wallet.py
+# financial_market_forcasting1/core/wallet.py
 """
 Virtual wallet as an append-only, hash-chained ledger (SQLite, no extra installs).
 

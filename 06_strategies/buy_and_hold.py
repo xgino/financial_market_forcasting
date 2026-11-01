@@ -1,4 +1,4 @@
-# paper-fund-v2/06_strategies/buy_and_hold.py
+# financial_market_forcasting1/06_strategies/buy_and_hold.py
 """Buy every asset in equal parts on day one and never touch it again. The benchmark."""
 SETTINGS = {"enabled": True, "follow": "base_plan"}
 

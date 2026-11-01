@@ -1,4 +1,4 @@
-# paper-fund-v2/02_features/macro_features.py
+# financial_market_forcasting1/02_features/macro_features.py
 """Macro features per day (real rate and its change, yield curve, dollar moves, VIX vs its last year),
 only values that were known that day. Writes data/features/macro.csv to look at.
 Your own models compute the same through their view (core/features.py)."""

@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/drift.py
+# financial_market_forcasting1/04_models/drift.py
 """Momentum: last year's average daily move just continues. Textbook name: random walk with drift."""
 SETTINGS = {"enabled": True, "lookback": 252}
 CARD = {  # shown on the dashboard page Models

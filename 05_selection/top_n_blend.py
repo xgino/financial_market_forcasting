@@ -1,4 +1,4 @@
-# paper-fund-v2/05_selection/top_n_blend.py
+# financial_market_forcasting1/05_selection/top_n_blend.py
 """A mix of the top N trusted models for today's situation (settings.TOP_N), weighted by their score.
 No model trusted yet = base plan."""
 SETTINGS = {"enabled": True}

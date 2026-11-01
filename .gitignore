@@ -3,6 +3,9 @@ venv/
 cenv/
 .venv/
 
+.agents/
+.claude/
+
 # Python leftovers (__pycache__/ and data/ are kept in git on purpose)
 .pytest_cache/
 
@@ -16,3 +19,7 @@ secrets.env
 .idea/
 .vscode/*
 !.vscode/settings.json
+
+# Fine-tuned model weights (~190 MB each, over GitHub's 100 MB file limit). index.csv stays in git;
+# python main.py 3 --only chronos_finetune makes the weights again.
+data/checkpoints/chronos_finetune/*/

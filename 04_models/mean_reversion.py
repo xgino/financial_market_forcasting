@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/mean_reversion.py
+# financial_market_forcasting1/04_models/mean_reversion.py
 """Pulls back to the 200 day average: far above it expects a drop, far below it expects a rise."""
 SETTINGS = {"enabled": True, "avg_days": 200, "speed": 0.1, "lookback": 252}
 CARD = {  # shown on the dashboard page Models

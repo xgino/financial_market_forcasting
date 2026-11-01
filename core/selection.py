@@ -1,4 +1,4 @@
-# paper-fund-v2/core/selection.py
+# financial_market_forcasting1/core/selection.py
 """
 Who to trust. Once a month (first trading day), per asset, a selector decides which forecast to follow:
 one model, a mix of models, or the base plan (no opinion on direction). It only gets what was known that
@@ -14,6 +14,7 @@ import pandas as pd
 
 import settings
 from core.contracts import Player
+from core.pooling import pooled
 
 
 @dataclass
@@ -31,9 +32,13 @@ class Context:
     asset: str
     situation: str
     forecasts: pd.DataFrame      # index = model: p10 p50 p90, all made today
-    trust: pd.DataFrame          # skill book as of today, this situation, all assets. index = model
+    trust: pd.DataFrame          # skill book as of today, this situation, pooled for this asset (core/pooling.py)
     finished: pd.DataFrame       # journal rows whose 20 days ended since the previous decision day
-    trust_all: pd.DataFrame = None  # skill book as of today, ALL situations together (more results per model)
+    trust_all: pd.DataFrame = None  # same, ALL situations together (more results per model)
+    similar: object = None          # similar(days) -> scores on the past days most like today (core/similar.py)
+    kinds: dict = None              # model -> kind (rule, stats, ml, pretrained, stack)
+    stretch: str = None             # today's stretch (core/stretches.py), e.g. "down-sharp"
+    by_label: object = None         # by_label("stretch:down-sharp") -> skill book for that label, pooled for this asset
 
 
 class Selector(Player):
@@ -45,7 +50,20 @@ class Selector(Player):
 
 def allowed(ctx):
     bad = set(settings.EXCLUDE) | set(settings.QUARANTINE)
-    return [m for m in ctx.forecasts.dropna().index if m not in bad]
+    return [m for m in ctx.forecasts.dropna().index if m not in bad and stack_ok(m, ctx.trust_all, ctx.kinds)]
+
+
+def stack_ok(m, record, kinds):
+    """A judge (kind "stack") may only be followed while its record so far (all situations, pooled for this
+    asset) has a higher IC than the best single model's record so far. Any other model: always True."""
+    kinds = kinds or {}
+    if kinds.get(m) != "stack":
+        return True
+    if record is None or m not in record.index or "ic" not in record or pd.isna(record.at[m, "ic"]):
+        return False
+    bad = set(settings.EXCLUDE) | set(settings.QUARANTINE)
+    singles = record.loc[[x for x in record.index if kinds.get(x) != "stack" and x not in bad], "ic"].dropna()
+    return len(singles) > 0 and record.at[m, "ic"] > singles.max()
 
 
 def trusted(ctx, table=None):
@@ -83,14 +101,20 @@ def decision_days(journal):
     return sorted(out)
 
 
-def run(journal, book, selectors, progress=True):
+def run(journal, book, selectors, tl=None, progress=True):
+    """tl (the timeline) is only needed for selectors that look at similar days."""
+    sd = None
+    if tl is not None and any(getattr(s, "needs_similar", False) for s in selectors.values()):
+        from core.similar import SimilarDays
+        sd = SimilarDays(journal, tl)
     events = decision_days(journal)
     days = {d for d, _ in events}
     today = journal[journal["date"].isin(days)]
     fc = {k: g.set_index("model") for k, g in today.groupby(["asset", "date"])}
-    book = book[book["scope"] == "all"]
+    book = book[book["scope"] != "all"]   # per asset rows: pooled per decision (settings.EVIDENCE)
     by_snap = {s: g for s, g in book.groupby("as_of")}
     snaps = pd.DatetimeIndex(sorted(by_snap))
+    kinds = journal.drop_duplicates("model").set_index("model")["kind"].to_dict() if "kind" in journal else {}
     known = journal.dropna(subset=["actual", "end_date", "p50"])
     known = known[~known["seen"].astype(bool)].sort_values("end_date")  # no learning on trained-on years
     ends = known["end_date"].to_numpy()
@@ -105,11 +129,16 @@ def run(journal, book, selectors, progress=True):
         situation = f["situation"].dropna().iloc[0] if f["situation"].notna().any() else None
         lo = 0 if prev is None else int(np.searchsorted(ends, np.datetime64(prev), side="right"))
         hi = int(np.searchsorted(ends, np.datetime64(d), side="right"))
-        trust = snap[snap["situation"] == situation].set_index("model")
+        trust = pooled(snap[snap["situation"] == situation], asset)
         ctx = Context(d, asset, situation, f[["p10", "p50", "p90"]], trust, known.iloc[lo:hi],
-                      trust_all=snap[snap["situation"] == "all"].set_index("model"))
+                      trust_all=pooled(snap[snap["situation"] == "all"], asset),
+                      similar=(lambda days, a=asset, day=d: sd.scores(a, day, days)) if sd is not None else None,
+                      kinds=kinds,
+                      stretch=f["stretch"].dropna().iloc[0] if "stretch" in f and f["stretch"].notna().any() else None,
+                      by_label=lambda label, sn=snap, a=asset: pooled(sn[sn["situation"] == label], a))
         prev = d
-        ranked = trust.reindex([m for m in allowed(ctx) if m in trust.index]).sort_values("ic", ascending=False)
+        ranked = trust.reindex([m for m in allowed(ctx) if m in trust.index])
+        ranked = ranked.sort_values("ic", ascending=False) if "ic" in ranked else ranked
         top = ", ".join(f"{m} {f.at[m, 'p50']:+.1%} (IC {ranked.at[m, 'ic']:+.2f})"
                         for m in ranked.index[:settings.TOP_N] if pd.notna(ranked.at[m, "ic"]))
         first = f.iloc[0]

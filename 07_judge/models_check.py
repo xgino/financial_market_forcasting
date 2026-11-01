@@ -1,4 +1,4 @@
-# paper-fund-v2/07_judge/models_check.py
+# financial_market_forcasting1/07_judge/models_check.py
 """Which models pass every pass mark, and are there red flags (too good to be true, ranges that are off)?"""
 SETTINGS = {"enabled": True}
 

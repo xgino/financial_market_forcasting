@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/tirex.py
+# financial_market_forcasting1/04_models/tirex.py
 """NX-AI TiRex (35M), pretrained. An xLSTM instead of a transformer: a third family next to Chronos and TimesFM."""
 SETTINGS = {
     "enabled": True,

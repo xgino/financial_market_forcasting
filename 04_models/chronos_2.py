@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/chronos_2.py
+# financial_market_forcasting1/04_models/chronos_2.py
 """Amazon Chronos-2 (120M), the newest Chronos, pretrained."""
 SETTINGS = {
     "enabled": True,

@@ -1,4 +1,4 @@
-# paper-fund-v2/core/simulate.py
+# financial_market_forcasting1/core/simulate.py
 """
 What a strategy does with the money, month by month.
 

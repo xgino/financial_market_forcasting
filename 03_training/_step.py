@@ -1,4 +1,4 @@
-# paper-fund-v2/03_training/_step.py
+# financial_market_forcasting1/03_training/_step.py
 """Step 3: every trainer in this folder trains one of your own models (walk-forward checkpoints)."""
 from pathlib import Path
 

@@ -7,7 +7,7 @@ smaller than `settings.NO_TRADE_BAND` are skipped.
 - `buy_and_hold.py` equal parts on day one, never trade (the benchmark)
 - `fixed_mix.py` always 80% invested, rebalanced (no forecasts)
 - `risk_balanced.py` sized by the range: less in wild assets
-- `follow_best.py` / `follow_bandit.py` base 60% plus or minus a 30% tilt when a trusted model expects a clear move
+- `follow_best.py` / `follow_bandit.py` / `follow_similar.py` base 60% plus or minus a 30% tilt when a trusted model expects a clear move (following best_in_situation / bandit / best_in_similar_days)
 - `cppi_floor.py` your "house money" idea: protect 85% of the best level so far, risk 3x what is above it
 
 KPIs and pass marks (`settings.PASS`) in `data/simulation/kpis.csv`, and what each strategy would do today

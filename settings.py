@@ -1,4 +1,4 @@
-# paper-fund-v2/settings.py
+# financial_market_forcasting1/settings.py
 """
 Global settings, in one place. Every file in a step folder (a model, a strategy, ...) also has its
 own SETTINGS at the top for what only that file uses.
@@ -14,6 +14,11 @@ FEE_RATE = 0.0025                        # 0.25% on every buy and every sell
 
 # ----- time -----
 HORIZON_DAYS = 20                        # every forecast looks 20 trading days (~1 month) ahead
+# Extra battles: the same models also forecast these horizons, each with its own journal, skill book and
+# leaderboard (data/battle/*_h5.csv, *_h60.csv). Decisions and strategies stay on HORIZON_DAYS.
+#   5  "when to buy this week" (~4x more results to score, noisier)    60  "the direction this quarter"
+# A model joins a horizon only if it can (SETTINGS "horizons", e.g. slow or trained-on-20-days models).
+HORIZONS = [5, 20, 60]
 WARMUP_UNTIL = "2009-12-31"              # models predict and get scored, nothing is judged yet
 HOLDOUT_FROM = "2019-01-01"              # never look at this period until the very end
 SHOW_HOLDOUT = False                     # True only for the final test
@@ -84,6 +89,31 @@ MACRO_LAG_DAYS = 1            # a value for day D is only used from the next tra
 # ----- trust: when does a model count as better than luck -----
 MIN_PERIODS = 20                         # independent results needed (forecasts / horizon)
 MIN_TRUST = 2.0                          # IC x sqrt(periods), above 2 = probably not luck
+
+# ----- evidence: whose results count for a model's trust on an asset (core/pooling.py) -----
+# A model's record on the asset itself counts fully, on assets in the same group a bit less, others not.
+# Only traded assets have a record (platinum and gold miners are training-only: never in the battle).
+GROUPS = {
+    "metals": ["gold", "silver"],
+    "stocks": ["sp500", "nasdaq", "aex"],
+    "bonds":  ["bonds"],
+    "crypto": ["bitcoin", "ethereum"],
+}
+EVIDENCE = "group"                       # which of POOLS the selectors, the verdict and the email use
+POOLS = {                                # weight of: the asset itself, its group, every other asset
+    "own":   {"own": 1.0, "group": 0.0, "other": 0.0},
+    "group": {"own": 1.0, "group": 0.5, "other": 0.0},
+    "all":   {"own": 1.0, "group": 1.0, "other": 1.0},   # every asset counts the same (how it was before)
+}
+
+# ----- stretches (core/stretches.py): pattern chunks, cut where the price line changed its behaviour -----
+STRETCHES = {
+    "window": 20,                        # the recent days compared with the stretch before them
+    "z": 3.0,                            # a new stretch when their average move differs this much (z score)...
+    "swings": 2.0,                       # ...or their swings are 2x bigger or smaller
+    "move": 1.0,                         # up / down: moved more than 1 normal swing over its length
+    "fast": 0.1,                         # fast / sharp: more than 0.1 normal swings per day
+}
 
 # ----- situations (02_features/situations.py) -----
 SITUATIONS = {

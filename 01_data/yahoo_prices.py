@@ -1,4 +1,4 @@
-# paper-fund-v2/01_data/yahoo_prices.py
+# financial_market_forcasting1/01_data/yahoo_prices.py
 """
 Daily prices from Yahoo Finance for every asset in settings.ASSETS and settings.TRAIN_ONLY_ASSETS, in EUR.
 Writes data/prices/<asset>.csv: date, open_eur, close_eur, close_raw, fx_close

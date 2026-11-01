@@ -1,4 +1,4 @@
-# paper-fund-v2/core/metrics.py
+# financial_market_forcasting1/core/metrics.py
 """
 How forecasts get scored. Calculated fresh on every run from what's in the data, nothing fixed.
 
@@ -10,10 +10,23 @@ How forecasts get scored. Calculated fresh on every run from what's in the data,
     periods     forecasts / horizon = roughly how many independent results the score is based on
   A model that says "no change" (middle 0%) scores exactly like naive: not punished, not rewarded.
 
-  ic_by_year / bootstrap / luck_test   is a score real or luck (see each function)
+  calls(rows)   the warning record, part of score(): how good are a model's "fall" and "rise" calls?
+    warn_*      after a fall call (middle guess below FALL_BELOW): how often it really fell
+    rise_*      after a rise call (middle guess above RISE_ABOVE, so it beats the costs): how often it rose
+    _periods    calls / horizon       _hit    share that came true      _base   same share on ALL days
+    _edge       hit - base            _move   avg result after the call minus avg result on all days
+    _trust      edge in units of its luck range (binomial, per independent period), above 2 = probably not luck
+
+  ic_by_year / bootstrap / luck_test / call_luck_test   is a score real or luck (see each function)
 """
 import numpy as np
 import pandas as pd
+
+import settings
+
+# the same lines the monthly verdict (core/verdict.py) uses for a "fall" and a "rise" vote
+RISE_ABOVE = 2 * (settings.FEE_RATE + settings.SPREAD) + settings.MIN_EDGE   # a rise that beats buy + sell costs
+FALL_BELOW = -settings.MIN_EDGE
 
 
 def spearman(a, b):
@@ -43,7 +56,24 @@ def score(g, horizon):
         "range_hit": float(((a >= g["p10"].to_numpy()) & (a <= g["p90"].to_numpy())).mean()),
         "spread": float(up_calls.mean() - down_calls.mean()) if len(up_calls) and len(down_calls) else np.nan,
         "ic": ic, "trust": ic * np.sqrt(periods) if not np.isnan(ic) else np.nan,
+        **calls(g, horizon),
     }
+
+
+def calls(g, horizon):
+    """The warning record: when a model said "fall" (or "rise"), how often did that happen, compared to any day?
+    A model that warns on most days just gets the base rate: no edge. Only calls that pick the bad days count."""
+    a, p50 = g["actual"].to_numpy(), g["p50"].to_numpy()
+    out = {}
+    for name, said, came in (("warn", p50 < FALL_BELOW, a < 0), ("rise", p50 > RISE_ABOVE, a > 0)):
+        n, base = int(said.sum()), float(came.mean()) if len(a) else np.nan
+        hit = float(came[said].mean()) if n else np.nan
+        periods = n / horizon
+        luck = np.sqrt(base * (1 - base) / periods) if periods > 0 and 0 < base < 1 else np.nan
+        out.update({f"{name}_periods": periods, f"{name}_hit": hit, f"{name}_base": base,
+                    f"{name}_edge": hit - base, f"{name}_trust": (hit - base) / luck if luck > 0 else np.nan,
+                    f"{name}_move": float(a[said].mean() - a.mean()) if n else np.nan})
+    return out
 
 
 def score_table(rows, by, horizon):
@@ -128,3 +158,26 @@ def similarity(rows):
     wide = rows.pivot_table(index=["date", "asset"], columns="run", values="p50")
     wide = wide[[r for r in wide.columns if wide[r].nunique() > 1]].dropna()
     return wide.rank().corr()
+
+def call_luck_test(rows, kind="warn", n=200, min_shift=60, seed=0):
+    """Like luck_test, for the warning record: shift each asset's results by a random number of days (so calls
+    and results no longer belong together) and see how often luck gets an edge as big as the real one."""
+    rng = np.random.default_rng(seed)
+    said_fn = (lambda p: p < FALL_BELOW) if kind == "warn" else (lambda p: p > RISE_ABOVE)
+    came_fn = (lambda a: a < 0) if kind == "warn" else (lambda a: a > 0)
+    out = {}
+    for run, g in rows.groupby("run"):
+        g = g.sort_values(["asset", "date"])
+        per_asset = [(gg["p50"].to_numpy(), gg["actual"].to_numpy()) for _, gg in g.groupby("asset")]
+        said = np.concatenate([said_fn(p) for p, _ in per_asset])
+        if said.sum() < 5:
+            continue
+        edge = lambda a: came_fn(a)[said].mean() - came_fn(a).mean()
+        real = edge(np.concatenate([a for _, a in per_asset]))
+        luck = []
+        for _ in range(n):
+            shifted = [np.roll(a, rng.integers(min_shift, max(min_shift + 1, len(a) - min_shift)))
+                       if len(a) > 2 * min_shift else a for _, a in per_asset]
+            luck.append(edge(np.concatenate(shifted)))
+        out[run] = {"edge": real, "luck_chance": (1 + np.sum(np.array(luck) >= real)) / (n + 1)}
+    return pd.DataFrame(out).T

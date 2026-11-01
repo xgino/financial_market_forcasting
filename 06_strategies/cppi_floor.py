@@ -1,4 +1,4 @@
-# paper-fund-v2/06_strategies/cppi_floor.py
+# financial_market_forcasting1/06_strategies/cppi_floor.py
 """Your "house money" idea, real name CPPI: protect a floor and only risk a multiple of what is above it.
 floor = floor_share x the highest the fund ever was (ratchet): profits get partly locked in as it grows.
 At the floor it sits fully in cash. The risky part is spread like follow_best (tilt by trusted models)."""

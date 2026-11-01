@@ -1,4 +1,4 @@
-# paper-fund-v2/tests/synthetic.py
+# financial_market_forcasting1/tests/synthetic.py
 """Fake random prices for the tests, so they run anywhere without downloading anything.
 On random prices no model can have real skill: a good test result here is 'nothing found'."""
 import numpy as np

@@ -1,4 +1,4 @@
-# paper-fund-v2/01_data/fred_macro.py
+# financial_market_forcasting1/01_data/fred_macro.py
 """
 Macro data from FRED (the US Federal Reserve's free data service), no account or key needed.
 Series and names in settings.MACRO_SERIES: real interest rate, 10 year rate, yield curve, dollar, VIX.

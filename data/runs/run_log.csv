@@ -95,3 +95,10 @@ ValueError: window shape cannot be larger than input array shape
 2026-11-01T14:01:32,01_data,ok,19.0,"{'fred_macro': 'ok', 'yahoo_macro': 'ok', 'yahoo_prices': 'ok'}"
 2026-11-01T14:06:23,02_features,ok,0.7,"{'macro_features': 'ok', 'price_features': 'ok', 'situations': 'ok'}"
 2026-11-01T14:17:06,01_data,error: No module named 'yfinance',1.9,
+2026-11-01T15:09:13,04_models,ok,9.7,"{'models': 2, 'leader': 'drift'}"
+2026-11-01T15:11:00,04_models,ok,6.7,"{'models': 2, 'leader': 'drift'}"
+2026-11-01T15:13:14,01_data,ok,19.9,"{'fred_macro': 'ok', 'yahoo_macro': 'ok', 'yahoo_prices': 'ok'}"
+2026-11-01T15:13:15,02_features,ok,0.9,"{'macro_features': 'ok', 'price_features': 'ok', 'situations': 'ok'}"
+2026-11-01T15:13:16,03_training,ok,1.3,"{'gbm': {'checkpoints': 21, 'new': 0}, 'linear': {'checkpoints': 21, 'new': 0}}"
+2026-11-01T15:59:24,04_models,stopped,2767.7,
+2026-11-01T16:16:37,03_training,ok,265.3,"{'chronos_finetune': '2 checkpoints; newest 2026-01-01: held-back loss zero-shot 4.4108, fine-tuned 4.4783 (NOT better)'}"

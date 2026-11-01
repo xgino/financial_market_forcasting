@@ -1,4 +1,4 @@
-# paper-fund-v2/main.py
+# financial_market_forcasting1/main.py
 """
 Runs the steps in order. Every step only does what's missing, so you can stop any time and run it
 again: it continues where it was. Forgot a month? The next run fills in what's missing.

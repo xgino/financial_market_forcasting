@@ -1,4 +1,4 @@
-# paper-fund-v2/03_training/gbm.py
+# financial_market_forcasting1/03_training/gbm.py
 # %% [markdown]
 # # Training: gbm, your own model
 # Gradient boosting (same family as LightGBM, via scikit-learn) on price features + macro features (FRED),

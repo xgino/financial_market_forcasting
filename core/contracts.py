@@ -1,4 +1,4 @@
-# paper-fund-v2/core/contracts.py
+# financial_market_forcasting1/core/contracts.py
 """
 What a model looks like. Every file in 04_models/ has SETTINGS at the top and one class based on Model.
 
@@ -12,6 +12,7 @@ A view (core/timeline.py) only shows data up to its date, so a model can't see t
 SETTINGS keys every model may use:
   enabled     False = the step skips this file
   seen_until  pretrained models: their release date. Forecasts up to then never count for trust
+  horizons    which of settings.HORIZONS it forecasts (default: all it can)
   device      auto / mps / cpu (doesn't change results)
   first_day   only forecast from this date on (slow models: skip the years that can't earn trust anyway)
 Everything else in SETTINGS is part of the cache key: change it and the forecasts are made again.
@@ -22,13 +23,14 @@ import numpy as np
 # 10% above +1.28. So middle -1.28 x swing size = bad case (p10), middle +1.28 x swing size = good case.
 Z90 = 1.2815515655446004
 NAN3 = np.array([np.nan, np.nan, np.nan])
-NOT_IN_CACHE_KEY = {"enabled", "seen_until", "device", "batch_size", "about"}
+NOT_IN_CACHE_KEY = {"enabled", "seen_until", "device", "batch_size", "about", "horizons"}
 
 
 class Model:
-    kind = "rule"          # rule | stats | ml | pretrained
+    kind = "rule"          # rule | stats | ml | pretrained | stack
     about = ""             # one line in plain words
     min_history = 260      # days of data needed before the first forecast
+    horizons = None        # horizons it can forecast (None = any); SETTINGS "horizons" overrides it
 
     def __init__(self, horizon, settings):
         self.horizon = horizon
@@ -36,6 +38,17 @@ class Model:
         self.run_name = type(self).__name__.lower()
         self.seen_until = self.s.get("seen_until")
         self.min_history = self.s.get("min_history", self.min_history)
+
+    def supports(self, horizon):
+        """Does this model take part in the battle for `horizon` (settings.HORIZONS)?"""
+        allowed = self.s.get("horizons", self.horizons)
+        return allowed is None or horizon in allowed
+
+    @property
+    def cache_name(self):
+        """File name of its forecasts: <model>.csv for the main horizon, <model>_h5.csv for 5 days, ..."""
+        import settings
+        return self.run_name if self.horizon == settings.HORIZON_DAYS else f"{self.run_name}_h{self.horizon}"
 
     def cache_settings(self):
         """What the forecasts depend on. Change any of it and the cached forecasts are redone."""

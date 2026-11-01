@@ -1,4 +1,4 @@
-# paper-fund-v2/05_selection/bandit.py
+# financial_market_forcasting1/05_selection/bandit.py
 """Reward and punish, with a memory that fades. Every month it grades each model on the results that just
 finished (the IC of that batch: did its higher guesses come before the better results? Saying "up" in a
 rising market earns nothing). Good months raise a model's score, bad months lower it, old months count less

@@ -1,4 +1,4 @@
-# paper-fund-v2/03_training/linear.py
+# financial_market_forcasting1/03_training/linear.py
 # %% [markdown]
 # # Training: linear, your own simple model
 # Ridge regression: one straight-line formula over the same features as gbm (price + macro, all assets).

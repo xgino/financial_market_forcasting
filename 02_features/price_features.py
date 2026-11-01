@@ -1,4 +1,4 @@
-# paper-fund-v2/02_features/price_features.py
+# financial_market_forcasting1/02_features/price_features.py
 """
 Simple numbers that describe the price line on each day (trend, swings, distance from averages, RSI).
 Every number on day D only uses closes up to and including D.

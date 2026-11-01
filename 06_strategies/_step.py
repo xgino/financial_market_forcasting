@@ -1,4 +1,4 @@
-# paper-fund-v2/06_strategies/_step.py
+# financial_market_forcasting1/06_strategies/_step.py
 """
 Step 6, what to do with the money. Every strategy gets EUR 1000 and runs month by month on what its
 selector chose (only what was known each month), trades at the next open with fees.

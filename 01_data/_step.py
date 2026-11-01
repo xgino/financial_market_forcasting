@@ -1,4 +1,4 @@
-# paper-fund-v2/01_data/_step.py
+# financial_market_forcasting1/01_data/_step.py
 """Step 1: every data source in this folder downloads and cleans its data into data/ as CSV."""
 from pathlib import Path
 

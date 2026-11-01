@@ -1,4 +1,4 @@
-# paper-fund-v2/06_strategies/follow_bandit.py
+# financial_market_forcasting1/06_strategies/follow_bandit.py
 """Same tilt as follow_best, but following the reward-and-punish selector (bandit)."""
 SETTINGS = {"enabled": True, "follow": "bandit", "base": 0.6, "tilt": 0.3, "min_edge": 0.005}
 

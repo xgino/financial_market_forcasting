@@ -1,4 +1,4 @@
-# paper-fund-v2/06_strategies/risk_balanced.py
+# financial_market_forcasting1/06_strategies/risk_balanced.py
 """Uses the part models ARE good at: the range. A wild asset (wide bad..good range) gets less money,
 a calm one more, so each asset brings about the same risk. Same total invested as fixed_mix."""
 SETTINGS = {"enabled": True, "follow": "base_plan", "invested": 0.8}

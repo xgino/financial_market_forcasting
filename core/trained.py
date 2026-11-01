@@ -1,4 +1,4 @@
-# paper-fund-v2/core/trained.py
+# financial_market_forcasting1/core/trained.py
 """
 Base for the 04_models files of your own trained models. It picks, for every day, the newest checkpoint
 whose cutoff is on or before that day (so it only knows what was known then), builds the same features
@@ -19,6 +19,7 @@ from core.features import NEEDS_DAYS, describe, full_table
 class TrainedModel(Model):
     kind = "ml"
     uses_macro = True
+    horizons = (settings.HORIZON_DAYS,)   # trained in 03_training on the main horizon's results only
     checkpoints = None          # folder name in data/checkpoints/
 
     def __init__(self, horizon, cfg):

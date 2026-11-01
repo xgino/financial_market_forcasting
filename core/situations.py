@@ -1,4 +1,4 @@
-# paper-fund-v2/core/situations.py
+# financial_market_forcasting1/core/situations.py
 """
 Core, stage 1: labels the situation an asset is in on each day, using only the past.
 

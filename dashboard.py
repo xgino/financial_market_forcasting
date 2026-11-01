@@ -1,4 +1,4 @@
-# paper-fund-v2/dashboard.py
+# financial_market_forcasting1/dashboard.py
 """
 The dashboard. Start it with:   venv/bin/streamlit run dashboard.py   (or streamlit run dashboard.py after
 source venv/bin/activate; any other Python is stopped, see core/env.py)
@@ -38,7 +38,7 @@ import settings  # noqa: E402
 DATA = settings.DATA
 COLORS = ["#4C78A8", "#F58518", "#54A24B", "#B279A2", "#E45756", "#72B7B2", "#EECA3B", "#9D755D", "#BAB0AC"]
 WIN = "#2e9e5b"
-st.set_page_config(page_title="Paper fund", layout="wide")
+st.set_page_config(page_title="financial_market_forcasting1", layout="wide")
 
 
 @st.cache_data
@@ -175,7 +175,21 @@ def page_now():
     with col[0]:
         st.markdown("#### Why")
         st.write("• " + v["text"])
-        if lead:
+        today = j[(j["asset"] == asset) & (j["date"] == d)]
+        if "stretch" in today and today["stretch"].notna().any():
+            sit_st = load("situations", f"{asset}.csv")
+            since = ""
+            if sit_st is not None and "stretch_start" in sit_st:
+                row = sit_st[sit_st["date"] <= d].tail(1)
+                if len(row) and pd.notna(row["stretch_start"].iloc[0]):
+                    since = f" since {pd.Timestamp(row['stretch_start'].iloc[0]):%d %b %Y} ({int(row['stretch_days'].iloc[0])} days)"
+            st.write(f"• Situation: **{situation}**. Stretch (pattern chunk): **{today['stretch'].dropna().iloc[0]}**{since}.")
+        if lead and v["call"] == "WAIT":
+            r = mt.loc[lead]
+            st.write(f"• **{lead}** is the model to listen to for warnings. After its 'fall' calls (all assets, only results it "
+                     f"couldn't have seen) the price fell {r['warn_hit_all']:.0%} of the time, against {r['warn_base_all']:.0%} "
+                     f"on any day. Warn trust {np.nanmax([r['warn_trust'], r['warn_trust_all']]):.1f} (above {settings.MIN_TRUST} = probably not luck).")
+        elif lead:
             stats, _ = track_record(j, asset, lead, d)
             if stats:
                 st.write(f"• **{lead}** is the model to listen to here. On {asset} since {stats['since']:%Y} it got the direction "
@@ -216,6 +230,7 @@ def page_now():
                 st.caption("Same rule, every past month on this asset, only what was known then (holdout hidden).")
     with st.expander("Every vote behind this call"):
         st.dataframe(v["votes"], width="stretch")
+    other_horizons(asset)
 
     # ----- long term: no models, just this asset's own history -----
     st.subheader(f"Long-term view: {asset} in EUR (no models, just its history)")
@@ -245,6 +260,35 @@ def page_now():
 
     with st.expander("Details: strategies and every model per asset"):
         now_details(j, book, ch, k, now, latest, amount)
+
+
+def other_horizons(asset):
+    """This week (5 days) and this quarter (60 days): the same vote, on each horizon's own battle."""
+    label = {5: "This week (5 trading days): when to buy", 60: "This quarter (60 trading days): the direction"}
+    shown = False
+    for h in [x for x in settings.HORIZONS if x != settings.HORIZON_DAYS]:
+        jh, bh = load("battle", f"journal_h{h}.csv"), load("battle", f"skillbook_h{h}.csv")
+        if jh is None or bh is None or asset not in set(jh["asset"]):
+            continue
+        if not shown:
+            st.subheader("Other horizons")
+            st.caption("The same vote, from each horizon's own battle and track record (step 4, settings.HORIZONS). "
+                       "Information only: the monthly decision above and the strategies stay on "
+                       f"{settings.HORIZON_DAYS} trading days.")
+            shown = True
+        d = jh.loc[jh["asset"] == asset, "date"].max()   # the newest day, not the month start: "this week"
+        mt, _ = models_on(jh, bh, asset, d)
+        va = verdict(mt, h)
+        with st.container(border=True):
+            st.markdown(f"**{label.get(h, f'{h} trading days')}** · {d:%d %b %Y}")
+            c = st.columns([1, 1, 4])
+            c[0].metric("call", va["call"])
+            c[1].metric("middle guess", f"{va['p50']:+.1%}", f"{va['p10']:+.1%} .. {va['p90']:+.1%}" if pd.notna(va["p10"]) else None,
+                        delta_color="off")
+            c[2].write(va["text"])
+    if not shown:
+        st.caption(f"Other horizons ({', '.join(str(h) for h in settings.HORIZONS if h != settings.HORIZON_DAYS)} days): "
+                   "run step 4 to battle them.")
 
 
 def now_details(j, book, ch, k, now, latest, amount):
@@ -654,10 +698,16 @@ def page_battle():
 
 def page_leaderboard():
     st.header("Leaderboard")
-    board, wins, book = load("battle", "leaderboard.csv"), load("battle", "winners.csv"), load("battle", "skillbook.csv")
+    hs = [h for h in settings.HORIZONS if h == settings.HORIZON_DAYS or (DATA / "battle" / f"leaderboard_h{h}.csv").exists()]
+    h = st.radio("horizon (trading days ahead)", hs, index=hs.index(settings.HORIZON_DAYS), horizontal=True) if len(hs) > 1 \
+        else settings.HORIZON_DAYS
+    tag = "" if h == settings.HORIZON_DAYS else f"_h{h}"
+    board, book = load("battle", f"leaderboard{tag}.csv"), load("battle", f"skillbook{tag}.csv")
+    wins = load("battle", "winners.csv") if not tag else None
     need(board, 4)
     st.caption(f"Development period ({int(settings.WARMUP_UNTIL[:4]) + 1} to {int(settings.HOLDOUT_FROM[:4]) - 1}), "
-               "only forecasts a model couldn't have seen in its own training.")
+               f"{h} trading days ahead, only forecasts a model couldn't have seen in its own training."
+               + ("" if not tag else f" Decisions use {settings.HORIZON_DAYS} days; this horizon is information."))
     p = settings.PASS
     board = board.copy()
     yrs = board["years_positive"].astype(str).str.extract(r"(\d+) of (\d+)").astype(float)
@@ -674,6 +724,17 @@ def page_leaderboard():
     st.dataframe(view.style.format({"periods": "{:.0f}", "ic": "{:+.3f}", "trust": "{:+.1f}", "luck_beats_it": "{:.1%}",
                                     "direction": "{:.1%}", "always_up": "{:.1%}", "skill": "{:+.1%}",
                                     "range_hit": "{:.0%}"}, na_rep=""), width="stretch", hide_index=True)
+    warning_record(board)
+    pools = load("battle", "pooling.csv") if not tag else None
+    if pools is not None and len(pools):
+        st.subheader("Whose results should count for trust?")
+        st.caption(f"Trust on an asset can use its own results only, add its group at half weight ({', '.join(settings.GROUPS)}), "
+                   f"or count every asset the same. Now used: **{settings.EVIDENCE}** (settings.EVIDENCE). 'predicts' = does a "
+                   "model's trust on 1 January predict its IC on that asset that year (rank correlation, higher = better); "
+                   "'steady' = trust this year vs next. 'all' gives every asset the same trust, so it's always steady: "
+                   "only 'predicts' decides.")
+        st.dataframe(pools.style.format({"pairs": "{:.0f}", "predicts": "{:+.3f}", "predicts_low": "{:+.3f}", "steady": "{:+.3f}"},
+                                        na_rep=""), width="stretch", hide_index=True)
     if wins is not None and len(wins):
         st.subheader("Monthly wins per year (closest price guess)")
         w = wins.assign(year=wins["date"].dt.year).groupby(["year", "winner"]).size().unstack(fill_value=0)
@@ -688,6 +749,39 @@ def page_leaderboard():
         fig.add_hline(y=settings.MIN_TRUST, line_dash="dash", annotation_text="trusted above this")
         fig.update_layout(height=320, template="plotly_white", yaxis_title="trust (IC x sqrt(periods))")
         st.plotly_chart(fig, width="stretch")
+
+
+def warning_record(board):
+    """Leaderboard section: is it a bad (or good) time to buy? How good each model's fall and rise calls were."""
+    if "warn_trust" not in board:
+        st.info("No warning record yet: run step 4 again to add it.")
+        return
+    p = settings.PASS
+    st.subheader("Warning record: is it a bad time to buy?")
+    st.caption("A fall call = its middle guess below "
+               f"{-settings.MIN_EDGE:+.1%}; a rise call = above {2 * (settings.FEE_RATE + settings.SPREAD) + settings.MIN_EDGE:+.1%} "
+               "(beats buy + sell costs), the same lines the monthly verdict uses. 'fell after' is how often the price really "
+               "fell in the 20 days after its fall calls; 'any day' is how often it fell anyway. Only the difference is skill. "
+               f"WAIT on the Now page listens to models with warn trust ≥ {settings.MIN_TRUST} and ≥ {settings.MIN_PERIODS} periods of calls.")
+    t = board.copy()
+    for k in ("warn", "rise"):
+        t[f"✓ {k}"] = ((t[f"{k}_trust"] >= p["trust"]) & (t[f"{k}_periods"] >= settings.MIN_PERIODS)
+                       & (t[f"{k}_luck"] < p["luck"])).map(ok)
+    t = t.sort_values("warn_trust", ascending=False, na_position="last")
+    view = t[["model", "kind", "✓ warn", "warn_periods", "warn_hit", "warn_base", "warn_move", "warn_trust", "warn_luck",
+              "✓ rise", "rise_periods", "rise_hit", "rise_base", "rise_move", "rise_trust", "rise_luck"]].rename(columns={
+        "warn_periods": "fall calls (periods)", "warn_hit": "fell after", "warn_base": "fell any day",
+        "warn_move": "move after vs any day", "warn_trust": "warn trust", "warn_luck": "luck beats it",
+        "rise_periods": "rise calls (periods)", "rise_hit": "rose after", "rise_base": "rose any day",
+        "rise_move": "move after vs any day ", "rise_trust": "rise trust", "rise_luck": "luck beats it "})
+    pct, pp = "{:.0%}", "{:+.2%}"
+    st.dataframe(view.style.format({"fall calls (periods)": "{:.0f}", "fell after": pct, "fell any day": pct,
+                                    "move after vs any day": pp, "warn trust": "{:+.1f}", "luck beats it": "{:.1%}",
+                                    "rise calls (periods)": "{:.0f}", "rose after": pct, "rose any day": pct,
+                                    "move after vs any day ": pp, "rise trust": "{:+.1f}", "luck beats it ": "{:.1%}"},
+                                   na_rep=""), width="stretch", hide_index=True)
+    st.caption("A ✅ needs: trust ≥ 2, enough calls, and luck (results shifted in time) beating it less than 5% of the time. "
+               "A model that says 'fall' on most days just gets the 'any day' rate: no edge.")
 
 
 def page_training():
@@ -790,6 +884,11 @@ def page_models():
                 k[4].metric("direction", "" if pd.isna(r["direction"]) else f"{r['direction']:.0%}", f"always up {r['always_up']:.0%}", delta_color="off")
                 k[5].metric("range hit", f"{r['range_hit']:.0%}", "should be ~80%", delta_color="off")
                 st.caption(f"Verdict: {r['verdict']}")
+                if pd.notna(r.get("warn_hit")):
+                    st.caption(f"Warning record: after its {r['warn_periods']:.0f} periods of 'fall' calls the price fell "
+                               f"{r['warn_hit']:.0%} of the time (any day: {r['warn_base']:.0%}), warn trust {r['warn_trust']:+.1f}. "
+                               + (f"After 'rise' calls it rose {r['rise_hit']:.0%} (any day {r['rise_base']:.0%})."
+                                  if pd.notna(r.get("rise_hit")) else ""))
             elif m.seen_until:
                 st.caption("Not on the 2010-2018 leaderboard: all those years are 'seen' for it. It earns trust from its release on.")
 

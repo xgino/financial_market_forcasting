@@ -1,4 +1,4 @@
-# paper-fund-v2/08_notify/_step.py
+# financial_market_forcasting1/08_notify/_step.py
 """Step 8: every notifier in this folder sends the month's news (only when it matters, see settings.NOTIFY)."""
 from pathlib import Path
 

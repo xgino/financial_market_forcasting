@@ -1,0 +1,3 @@
+cutoff,train_windows,check_windows,loss_zero_shot,loss_finetuned,helped,settings
+2025-01-01,228113,256,5.87294,5.85674,True,37e17a043bfe56ac
+2026-01-01,236372,256,4.41077,4.47828,False,37e17a043bfe56ac

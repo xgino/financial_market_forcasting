@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/ets.py
+# financial_market_forcasting1/04_models/ets.py
 """Classic statistics from the statsforecast library (exponential smoothing (ETS)), fitted fresh every day on the last
 year of log prices. Strong in forecasting competitions; on market prices often close to naive.
 Install: pip install statsforecast"""

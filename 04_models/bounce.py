@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/bounce.py
+# financial_market_forcasting1/04_models/bounce.py
 """Bounce back: after a fall over the last 20 days it expects a rise, after a rise a dip."""
 SETTINGS = {"enabled": True, "days": 20, "strength": 0.25, "only_drops": False, "lookback": 252}
 CARD = {  # shown on the dashboard page Models

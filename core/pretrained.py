@@ -1,4 +1,4 @@
-# paper-fund-v2/core/pretrained.py
+# financial_market_forcasting1/core/pretrained.py
 """
 Shared code for pretrained models, so each model file in 04_models/ stays a few lines of SETTINGS.
 
@@ -79,6 +79,51 @@ class Chronos(Model):
         return ["A pretrained neural network that continues the shape of the last 512 prices.",
                 "It can't explain its own reasoning, so judge it only by its track record, and only on years after "
                 f"its release ({self.seen_until}): before that it may have seen these prices while it was trained."]
+
+
+class ChronosFinetuned(Chronos):
+    """Chronos with your fine-tuned checkpoints (03_training/chronos_finetune.py): every day uses the newest
+    checkpoint whose cutoff is on or before it, so it only learned from what was known then."""
+    horizons = (20,)   # fine-tuned on 20 day targets
+
+    def __init__(self, horizon, cfg):
+        super().__init__(horizon, {**cfg, "checkpoint": cfg.get("checkpoint", "")})   # set per day below
+        self.folder = settings.DATA / "checkpoints" / self.s.get("trainer", "chronos_finetune")
+        idx = self.folder / "index.csv"
+        self.index = pd.read_csv(idx, parse_dates=["cutoff"]).sort_values("cutoff") if idx.exists() else pd.DataFrame()
+        self._ck = None
+
+    def cache_settings(self):
+        """Retraining (a new or changed checkpoint) makes all its forecasts again."""
+        from core import store
+        ix = self.index.drop(columns=["settings"], errors="ignore")
+        return {**super().cache_settings(), "checkpoints": store.fingerprint(ix) if len(ix) else None}
+
+    def _cutoff(self, date):
+        ok = self.index[self.index["cutoff"] <= date] if len(self.index) else self.index
+        return None if ok.empty else ok["cutoff"].iloc[-1]
+
+    def predict_batch(self, views, asset):
+        out = np.full((len(views), 3), np.nan)
+        groups = {}
+        for i, v in enumerate(views):
+            c = self._cutoff(v.date)
+            if c is not None:
+                groups.setdefault(c, []).append(i)
+        for c, idx in sorted(groups.items()):
+            path = self.folder / str(c.date())
+            row = self.index[self.index["cutoff"] == c].iloc[0]
+            if self.s.get("only_if_helped", True) and "helped" in row and not bool(row["helped"]):
+                path = self.s.get("base", "amazon/chronos-bolt-small")   # fine-tuning didn't help (known at the cutoff)
+            if self._ck != path:                       # one checkpoint in memory at a time
+                self.unload()
+                self.checkpoint, self._ck = str(path), path
+            out[idx] = super().predict_batch([views[i] for i in idx], asset)
+        return out
+
+    def unload(self):
+        super().unload()
+        self._ck = None
 
 
 class TimesFM(Model):
@@ -348,9 +393,9 @@ class TimeMoE(Model):
         x = (x - mu) / sd
         mids = []
         for s in range(0, len(x), self.batch_size):
-            with torch.no_grad():   # the 32 day head in one pass, first 20 days kept (no step by step generate)
+            with torch.no_grad():   # the 32 (or 64) day head in one pass, the first `horizon` days kept
                 o = m(input_ids=torch.tensor(x[s:s + self.batch_size], device=self._device),
-                      max_horizon_length=32, use_cache=False, return_dict=True)
+                      max_horizon_length=32 if self.horizon <= 32 else 64, use_cache=False, return_dict=True)
             mids.append(o.logits[:, -1, self.horizon - 1].float().cpu().numpy())
         mid = np.concatenate(mids) * sd[:, 0] + mu[:, 0]
         for r, i in enumerate(ok):

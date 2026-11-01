@@ -1,4 +1,4 @@
-# Paper fund (v2)
+# financial_market_forcasting1
 
 A lab that tests whether any model can really forecast markets, with a virtual EUR 1000 and strict rules
 against fooling yourself. Gold first; silver, stocks, bonds, Bitcoin and Ethereum are in too.
@@ -11,7 +11,7 @@ Every folder with a number is a step. Steps run in order. What's done and what's
 02_features    trend, swings, situation label per day           │  the data
 03_training    your own models (gbm, linear), walk-forward      ─┘
 04_models      the battle: every model forecasts every day,       one forecast = bad / middle / good case
-               20 trading days ahead, scored once those days are over
+               20 trading days ahead, scored once those days are over (also 5 and 60 days: settings.HORIZONS)
 05_selection   who to trust this month, per situation (or nobody = base plan)
 06_strategies  what to do with EUR 1000: buy / sell / hold, with fees
 07_judge       plain-language report: what's good, what needs a look
@@ -23,8 +23,8 @@ Every folder with a number is a step. Steps run in order. What's done and what's
 | `01_data/` | download and clean prices and macro data. Today's bar waits until it's final (tomorrow) | `data/prices/`, `data/macro/` |
 | `02_features/` | trend, swings and one of 6 situations per day (up/flat/down × calm/wild) | `data/features/`, `data/situations/` |
 | `03_training/` | train your own models walk-forward: each checkpoint only learns from results finished by its date | `data/checkpoints/`, `data/training/` |
-| `04_models/` | the battle: every model forecasts, gets scored and ranked, month by month (skill book) | `data/forecasts/`, `data/battle/` |
-| `05_selection/` | per month and situation: which model(s) to follow, or none | `data/selection/` |
+| `04_models/` | the battle: every model forecasts, gets scored and ranked, month by month (skill book). Same for 5 and 60 days (information; decisions use 20) | `data/forecasts/`, `data/battle/` (`*_h5`, `*_h60`) |
+| `05_selection/` | per month and situation: which model(s) to follow, or none. A model's record for an asset = that asset, plus its group (`settings.GROUPS`) at half weight | `data/selection/` |
 | `06_strategies/` | EUR 1000 month by month, with fees, against buy & hold | `data/simulation/` |
 | `07_judge/` | checks data, models, strategies and live results | `data/judge/` |
 | `08_notify/` | the monthly email (needs `secrets.env`) | `data/notify/` |
@@ -43,6 +43,8 @@ Not numbered:
 | rules | `naive`, `drift`, `mean_reversion`, `bounce`, `history_range` |
 | statistics | `theta`, `ets`, `garch`, `analog` (pattern matching) |
 | your own (trained in 03) | `gbm`, `linear` |
+| judge (stacking, refit monthly in 04) | `judge`: reads every other model's guess + the day's situation numbers; followed only while it beats the best single model |
+| pretrained, fine-tuned by you (03) | `chronos_small_ft`: Chronos-Bolt small fine-tuned walk-forward on your assets, battles `chronos_small` |
 | pretrained, zero shot | `chronos_small`, `chronos_base`, `chronos_2` (Amazon), `timesfm` (Google), `tirex` (NX-AI), `kronos_small` (market candles), `moirai_2` (Salesforce), `timemoe` (Time-MoE 200M) |
 
 Pretrained models download themselves from Hugging Face the first time (cached in `~/.cache/huggingface`).

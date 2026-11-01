@@ -1,4 +1,4 @@
-# paper-fund-v2/04_models/kronos_small.py
+# financial_market_forcasting1/04_models/kronos_small.py
 """Kronos-small (25M), pretrained on market candles only. Slow (it draws 20 futures per forecast), so it only
 forecasts from first_day on: earlier years can't earn trust anyway, because of seen_until."""
 SETTINGS = {
@@ -9,6 +9,7 @@ SETTINGS = {
     "samples": 20,                # possible futures per forecast; the range is read from them
     "seen_until": "2025-08-31",
     "first_day": "2025-09-01",
+    "horizons": [20],             # slow: only the main horizon (add 5, 60 to battle those too)
 }
 CARD = {  # shown on the dashboard page Models
     "type": 'pretrained on financial candles (zero shot, not fine-tuned)',
