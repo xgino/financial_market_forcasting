@@ -94,3 +94,4 @@ ValueError: window shape cannot be larger than input array shape
 2026-11-01T13:22:29,01_data,error: No module named 'yfinance',2.1,
 2026-11-01T14:01:32,01_data,ok,19.0,"{'fred_macro': 'ok', 'yahoo_macro': 'ok', 'yahoo_prices': 'ok'}"
 2026-11-01T14:06:23,02_features,ok,0.7,"{'macro_features': 'ok', 'price_features': 'ok', 'situations': 'ok'}"
+2026-11-01T14:17:06,01_data,error: No module named 'yfinance',1.9,
