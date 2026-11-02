@@ -150,10 +150,11 @@ def history(j, book, assets=None):
     """The same rule every past month (only what was known then), holdout hidden unless SHOW_HOLDOUT."""
     out = []
     for a in assets or sorted(j["asset"].unique()):
-        for d in firsts(j, a):
+        ja = j[j["asset"] == a]                                   # once per asset, not once per month (much faster)
+        for d in firsts(ja, a):
             if not settings.SHOW_HOLDOUT and d >= pd.Timestamp(settings.HOLDOUT_FROM):
                 continue
-            mt, _ = models_on(j, book, a, d)
+            mt, _ = models_on(ja, book, a, d)
             if mt.empty or mt["actual"].isna().all():
                 continue
             v = verdict(mt)

@@ -44,39 +44,36 @@ def pooled(rows, asset, pool=None):
     if rows.empty:
         return pd.DataFrame(columns=EMPTY, dtype=float)
     w = rows["scope"].map(weights(asset, rows["scope"].unique(), pool)).astype(float)
-    rows = rows[w > 0].assign(_w=w[w > 0])
+    rows, w = rows[w > 0], w[w > 0]
     if rows.empty:
         return pd.DataFrame(columns=EMPTY, dtype=float)
-    out = {}
-    for model, g in rows.groupby("model"):
-        r = {"periods": _wsum(g["_w"], g["periods"])}
-        for c in BY_PERIODS:
-            if c in g:
-                r[c] = _wavg(g[c], g["_w"] * g["periods"])
-        r["trust"] = r["ic"] * np.sqrt(r["periods"]) if pd.notna(r.get("ic")) else np.nan
-        for k, cols in BY_CALLS.items():
-            if f"{k}_periods" not in g:
-                continue
-            calls = g["_w"] * g[f"{k}_periods"].fillna(0)
-            r[f"{k}_periods"] = float(calls.sum())
-            for c in cols:
-                r[c] = _wavg(g[c], calls)
-            base, n = r.get(f"{k}_base"), r[f"{k}_periods"]
-            r[f"{k}_edge"] = r[f"{k}_hit"] - base if pd.notna(r[f"{k}_hit"]) and pd.notna(base) else np.nan
-            luck = np.sqrt(base * (1 - base) / n) if n > 0 and pd.notna(base) and 0 < base < 1 else np.nan
-            r[f"{k}_trust"] = r[f"{k}_edge"] / luck if pd.notna(luck) and luck > 0 else np.nan
-        out[model] = r
-    return pd.DataFrame(out).T
+    by = rows["model"].to_numpy()
+    periods = rows["periods"]
+    out = pd.DataFrame({"periods": (w * periods).where(periods.notna(), 0.0).groupby(by).sum()})
+    cols = [c for c in BY_PERIODS if c in rows]
+    out[cols] = _wavg(rows[cols], w * periods, by)
+    out["trust"] = out["ic"] * np.sqrt(out["periods"])
+    for k, cols in BY_CALLS.items():
+        if f"{k}_periods" not in rows:
+            continue
+        calls = w * rows[f"{k}_periods"].fillna(0)
+        n = calls.groupby(by).sum()
+        out[f"{k}_periods"] = n
+        out[cols] = _wavg(rows[cols], calls, by)
+        base = out.get(f"{k}_base", pd.Series(np.nan, index=out.index))
+        out[f"{k}_edge"] = out[f"{k}_hit"] - base
+        luck = np.sqrt(base * (1 - base) / n).where((n > 0) & (base > 0) & (base < 1))
+        out[f"{k}_trust"] = (out[f"{k}_edge"] / luck).where(luck > 0)
+    return out.astype(float)
 
 
-def _wsum(w, x):
-    ok = x.notna()
-    return float((w[ok] * x[ok]).sum())
-
-
-def _wavg(x, w):
-    ok = x.notna() & w.notna() & (w > 0)
-    return float((x[ok] * w[ok]).sum() / w[ok].sum()) if ok.any() else np.nan
+def _wavg(x, w, by):
+    """Per model (by), the average of every column of x weighted by w; NaN where nothing counts."""
+    w = w.where(w.notna() & (w > 0), 0.0)
+    ok = x.notna().mul(w, axis=0)
+    num = x.fillna(0.0).mul(w, axis=0).groupby(by).sum()
+    den = ok.groupby(by).sum()
+    return num / den.where(den > 0)
 
 
 def check(journal, horizon=None, first_year=None, last_year=None):

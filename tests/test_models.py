@@ -143,6 +143,15 @@ def test_cache_redoes_only_from_the_first_changed_month():
     rescaled = Timeline({**{a: tl.view(end).bars(a) for a in tl.assets}, "asset0": b}, tl.extras())
     cut = battle.first_changed_day(old, battle.month_hashes(rescaled, ["asset0"], end, macro=True))
     assert cut == pd.Timestamp(div.strftime("%Y-%m-01")), f"a dividend in {div.date()} should only redo its month, got {cut}"
+    # Yahoo's rounding after a rescale: every price off by ~0.000003, nothing really changed
+    noisy = tl.view(end).bars("asset0").copy()
+    noisy[["open_eur", "close_eur"]] *= 1 + np.random.default_rng(0).normal(0, 3e-6, (len(noisy), 2))
+    noisy_tl = Timeline({**{a: tl.view(end).bars(a) for a in tl.assets}, "asset0": noisy}, tl.extras())
+    cut = battle.first_changed_day(old, battle.month_hashes(noisy_tl, ["asset0"], end, macro=True))
+    assert cut is None, f"rounding noise redid history from {cut}"
+    # a cache saved with the older exact fingerprints: kept, only its last month redone
+    legacy = {m: "abc" for m in old}
+    assert battle.first_changed_day(legacy, old) == pd.Timestamp(max(old) + "-01")
 
 
 def test_similar_days_only_use_known_results():

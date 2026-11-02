@@ -127,9 +127,10 @@ class Judge(Model):
                 x, target, end = self._table(view, a)
                 ok = (end < month).to_numpy() & np.isfinite(target.to_numpy())
                 X.append(x[ok]), y.append(target[ok])
-            X = pd.concat(X) if X else pd.DataFrame()
+            X = pd.concat(X).replace([np.inf, -np.inf], np.nan) if X else pd.DataFrame()
             y = pd.concat(y) if y else pd.Series(dtype=float)
-            if len(X) < self.min_rows:
+            X = X[[c for c in X.columns if X[c].nunique(dropna=True) >= 2]]   # early years: no macro yet, sklearn crashes on an empty column
+            if len(X) < self.min_rows or X.empty:
                 self._fits[month] = None
             else:
                 m = HistGradientBoostingRegressor(max_depth=self.s.get("max_depth", 3), learning_rate=self.s.get("learning_rate", 0.05),

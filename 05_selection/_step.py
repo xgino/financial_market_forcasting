@@ -2,7 +2,9 @@
 """
 Step 5, who to trust. Every selector in this folder picks, once a month per asset, what to follow, with
 only what was known that day. Saves data/selection/choices.csv (every choice + the top N models and their
-forecasts) and data/selection/scores.csv (how each selector did, development period).
+forecasts), data/selection/scores.csv (how each selector did, development period) and
+data/selection/past_calls.csv (the monthly BUY / WAIT / KEEP YOUR PLAN rule on every past month: what came after,
+for the dashboard).
 """
 from pathlib import Path
 
@@ -10,6 +12,7 @@ import pandas as pd
 
 import settings
 from core import battle, selection, store
+from core.verdict import history
 from core.plugins import load_players
 from core.timeline import Timeline
 
@@ -55,4 +58,10 @@ def run(args):
         best = choices[choices["selector"] == name]
         if len(best):
             print(f"\nWhat {name} followed:", best["main_model"].value_counts().to_dict())
+    calls = history(journal, book)                             # holdout hidden unless SHOW_HOLDOUT
+    store.write_csv(calls, store.path("selection", store.tag("past_calls") + ".csv"), index=False)
+    if len(calls):
+        print("\nThe monthly call on every past month (all assets), and what came after:")
+        print(calls.groupby("call")["real"].agg(times="size", went_up=lambda r: f"{(r > 0).mean():.0%}",
+                                                avg_after=lambda r: f"{r.mean():+.2%}").to_string())
     return {"selectors": len(selectors)}

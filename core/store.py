@@ -17,6 +17,7 @@ and the step makes the file again. That's how a CSV can't silently go out of dat
 """
 import hashlib
 import json
+import os
 
 import numpy as np
 import pandas as pd
@@ -66,10 +67,15 @@ def read_meta(p):
 
 
 def write_csv(df, p, meta=None, index=True):
+    """Written to a temporary file first, then swapped in: a stopped run never leaves half a file."""
     p.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(p, index=index, date_format="%Y-%m-%d")
+    tmp = p.with_name(p.name + ".tmp")
+    df.to_csv(tmp, index=index, date_format="%Y-%m-%d")
+    os.replace(tmp, p)
     if meta is not None:
-        meta_path(p).write_text(json.dumps(meta, indent=1, default=str))
+        m = meta_path(p)
+        m.with_name(m.name + ".tmp").write_text(json.dumps(meta, indent=1, default=str))
+        os.replace(m.with_name(m.name + ".tmp"), m)
 
 
 def read_csv(p, dates=("date",), index_col=None):

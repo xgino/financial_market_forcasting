@@ -29,10 +29,25 @@ What's done, what's next. Tick a box (`[x]`) when it's done. The order inside "N
 - [x] tqdm progress bar per model and asset; progress saved at least every minute (Kronos in small chunks)
 - [x] Dividend rescales (SPY, QQQ, TLT) no longer redo whole histories: months are compared by daily moves
 - [x] `python main.py 4 --fresh` really starts the battle from scratch (it was ignored before)
+- [x] Full battle run done (2026-11-02): 21 models × 8 assets × 5/20/60 days, then steps 5-7, 0 errors
+- [x] Yahoo's rounding after a rescale (~0.000003 per price) no longer looks like changed old prices: months are compared with a 0.1% margin, not an exact fingerprint (it redid all history from 2003 on every run)
+- [x] Judge: skips empty columns in its monthly fit (the early years have no macro yet; sklearn crashed)
+- [x] One run at a time (`core/runs.py`, `data/runs/running.json`): a second `main.py` stops right away; two at once had broken `skillbook_h60.csv`
+- [x] Every CSV is written to a temp file first and then swapped in: a stopped run never leaves half a file
+- [x] Skill book pooling 5× faster (same numbers, checked on 1,800 snapshots); the monthly call on every past month is saved by step 5 (`data/selection/past_calls.csv`)
 
-## Now
-- [ ] Finish the battle run with all 19 models (Kronos ~1-2 h, Time-MoE ~2.5 h), then steps 5-6
-- [ ] Look at the leaderboard: do TiRex, Kronos, Moirai 2 or Time-MoE show anything on gold after their release?
+### Dashboard v3 (2026-11-02)
+- [x] One file per page in `app/pages/`, shared code in `app/common.py`; `dashboard.py` only lists the pages
+- [x] Overview page (KPIs): a signal card per asset (best guess vs the market's normal swing and the costs, instead of only a bad .. good range), the best strategy vs buy & hold, how many models proved an edge per horizon, the judge's verdict
+- [x] Forecasts page: price + every model's forecast ahead (5 / 20 / 60 days), every past guess against what really happened (development years), right direction / average miss / range / IC per model, and the long-term view (held for 1 month to 10 years)
+- [x] Runs in the background from the sidebar on every page: Update now, Keep updating every day (`python main.py 1-7 --every 24`), Stop, live status; the page reloads with the new results when a run ends
+- [x] This month page: the old Now page with the signal in euros and how often this call was right before
+
+## Results of the full run (development years 2010-2018, holdout hidden)
+- Nothing beats the plan yet: `risk_balanced` (Sharpe 1.23, worst drop -8%) and `fixed_mix` (+12.1% per year) use no forecasts; every strategy that follows forecasts lands around +9% per year
+- Proven edge: `theta` on **5 days** (trust 3.9, positive 9 of 9 years, luck 1%) and `gbm` on 20 days (trust 2.1, luck 0.5%). Nothing on 60 days
+- The monthly rule said BUY 0 times and WAIT 2 times in 1,197 past asset-months: with these models it almost always says KEEP YOUR PLAN
+- Pretrained models (Chronos, TimesFM, TiRex, Kronos, Moirai 2, Time-MoE) can't be judged yet: they only count after their release (2024-2025), which is inside the holdout
 
 ## Next: better decisions from the same historical data
 
@@ -42,8 +57,9 @@ What's done, what's next. Tick a box (`[x]`) when it's done. The order inside "N
 - [x] Both in the skill book, per situation and per asset, month by month; trust = edge in units of luck (z ≥ 2); leaderboard adds a shift luck test
 - [x] WAIT on the Now page weighs fall votes by the warning record and needs a proven warner (`core/verdict.py`); BUY still uses IC trust
 - [x] Dashboard: warning record table on Leaderboard, a line per model on Models, the warner's record on Now when it says WAIT
-- [ ] After the full battle run: `python main.py 4-6` once more (forecasts are cached, only the skill book and leaderboard are rebuilt with the new columns)
-- [ ] Look at it: does any model warn better than luck on gold? Does WAIT avoid the bad months in the history replay ("past success of this call")?
+- [x] After the full battle run: `python main.py 4-6` once more (done 2026-11-02, the skill book has the new columns)
+- [x] Looked at it: **no model warns better than luck**. Best warn trust: history_range 1.5, theta 1.2 (needs 2); analog passes the luck test (1.5%) but trust is only 1.0. WAIT came 2 times in 1,197 asset-months
+- [ ] Try a stricter fall line (middle guess below -2% instead of -0.5%): fewer calls, maybe a clearer record
 
 ### 2. Select on similar days instead of 6 fixed boxes
 - [x] Describe each day with numbers: trend strength, swings now vs normal, last 20/60 day shape, distance from the 1 year high, real rate, dollar (`core/similar.py`)
@@ -51,7 +67,7 @@ What's done, what's next. Tick a box (`[x]`) when it's done. The order inside "N
 - [x] Score every model only on those days: trust over independent 20 day periods (fewer/clustered days = higher bar) + a luck test that shuffles whole periods
 - [x] New selector `best_in_similar_days` next to `best_in_situation`, and strategy `follow_similar` next to `follow_best`, so steps 5 and 6 compare them
 - [x] Tests: similar days only have known results, garbage after the date changes nothing; the selection no-future test covers the new selector
-- [ ] After the full battle run: compare `best_in_similar_days` vs `best_in_situation` (step 5 scores) and `follow_similar` vs `follow_best` (step 6)
+- [x] Compared (2026-11-02): similar days is the only grouping with a positive IC (+0.046, move when up +0.26% vs all), but it has an opinion only 10% of the months; `follow_similar` +9.0% per year vs `follow_best` +8.9%, Sharpe 1.04 vs 1.05: no real difference
 - [ ] Try `days` 100 / 150 / 250 in its SETTINGS: does a smaller, closer set help or just add luck?
 
 ### 3. More evidence: pool related assets
@@ -60,7 +76,8 @@ Found: trust was already pooled, over ALL assets equally (gold's trust counted B
 - [x] Own asset counts fully, its group at half weight, other assets not (`settings.POOLS`, `settings.EVIDENCE = "group"`); periods add up weighted, so borrowed evidence raises trust less (`core/pooling.py`)
 - [x] Skill book has rows per asset and situation; selectors, the Now verdict and the email use the pooled record
 - [x] Check in step 4 (`data/battle/pooling.csv`, Leaderboard page): own / group / all, does trust on 1 January predict that year's IC, and how steady is it
-- [ ] After the full battle run: read the check and set `settings.EVIDENCE` to the pool that predicts best
+- [x] Read the check (2026-11-02): `all` predicts next year's IC best (+0.26), `group` -0.09, `own` -0.04 (9 years)
+- [ ] Set `settings.EVIDENCE = "all"`, then `python main.py 5-7` (only 9 years of evidence: check again after the holdout)
 - [ ] Platinum and gold miners as traded (battled) assets, so metals has 4 members (costs ~2 more assets of battle time)
 
 ### 4. A judge model on top of the models (stacking)
@@ -69,7 +86,8 @@ Found: trust was already pooled, over ALL assets equally (gold's trust counted B
 - [x] Runs after every other model; its cache follows the other models' cache keys
 - [x] Followed (selectors) and voting (Now verdict) only while its record so far beats the best single model's record so far (`stack_ok`); the leaderboard says whether it beats the best on the development years
 - [x] Tests: no future (prices, macro and other models' forecasts after the date), memory years ignored, the beat-the-best gate
-- [ ] After the full battle run: does the judge beat the best single model? If it doesn't, try fewer inputs (only models with some trust) or a plainer learner (ridge)
+- [x] After the full battle run: **the judge doesn't beat the best single model** on any horizon (20 days: IC +0.031 vs theta +0.097; 5 days -0.001; 60 days -0.011). The gate keeps it out of the decisions, as designed
+- [ ] Try fewer inputs (only models with some trust) or a plainer learner (ridge)
 
 ### 5. More than one horizon
 - [x] `settings.HORIZONS = [5, 20, 60]`: step 4 battles every horizon; decisions and strategies stay on `HORIZON_DAYS = 20`
@@ -77,7 +95,8 @@ Found: trust was already pooled, over ALL assets equally (gold's trust counted B
 - [x] Which models join: SETTINGS `horizons` (gbm and linear only 20: trained on 20 day results; Kronos and Time-MoE only 20: slow); the judge reads the same horizon's forecasts
 - [x] Dashboard: Now page "This week (5 days)" and "This quarter (60 days)" calls; Leaderboard page has a horizon picker
 - [x] Tests: who joins which horizon, no future on 5 and 60 days, a 5 day range is narrower than a 60 day one
-- [ ] After the full battle run: which models have skill on 5 or 60 days that they don't have on 20?
+- [x] After the full battle run: **theta on 5 days** has the strongest record found so far (trust 3.9, luck 1%, positive 9 of 9 years); ets and analog on 5 days "maybe". Nothing proven on 60 days
+- [ ] Let decisions use the 5 day horizon too: a weekly "is this a good week to buy?" from theta
 - [ ] Train gbm and linear per horizon too (03_training on 5 and 60 day results)
 - [ ] If 5 days shows real skill: a weekly strategy (more trades, more fees: does it still win after costs?)
 
@@ -87,7 +106,7 @@ Found: trust was already pooled, over ALL assets equally (gold's trust counted B
 - [x] Skill book scores every model per stretch kind (`stretch:<kind>`, pooled per asset like the situations); selector `best_in_stretch`, strategy `follow_stretch`; Now page shows the stretch and since when
 - [x] Step 5 prints which grouping finds the model to follow best: none / situations / stretches / similar days (`data/selection/groupings.csv`)
 - [x] Tests: stretches never change when the future changes, stretch scores use the right forecasts and don't double count, selection no-future test covers `best_in_stretch`
-- [ ] After the full battle run: read the groupings table. A grouping only helps if it beats "no grouping" on IC and on "move when up vs all"
+- [x] Read the groupings table (2026-11-02): stretches IC -0.184 and move when up -0.04% vs all: **stretches don't help** as they are. No grouping -0.413, situations never found a trusted model
 - [ ] Tune `settings.STRETCHES` only on the development years (gold: 36 stretches since 2003, median ~100 days, sideways-wild 39%)
 
 ### 7. Fine-tune the pretrained models (last: slow, small expected gain)
@@ -95,12 +114,13 @@ Found: trust was already pooled, over ALL assets equally (gold's trust counted B
 - [x] Held-back check (Training page): 2025 fine-tuned 5.857 vs zero-shot 5.873 (0.3% better), 2026 4.478 vs 4.411 (1.5% worse)
 - [x] `chronos_small_ft` in the battle against `chronos_small` (same model, zero shot), from 2025 on; a year whose fine-tuning didn't help (known at its cutoff) uses the base model
 - [x] Weights (~190 MB each) kept out of git; `index.csv` stays in
-- [ ] After the battle re-run: does `chronos_small_ft` beat `chronos_small` on 2025-2026? (Few results yet: judge again in a year)
+- [ ] Does `chronos_small_ft` beat `chronos_small` on 2025-2026? Can't tell yet: both only count from 2025, which is inside the holdout (the battle ran, forecasts are cached). Judge it when the holdout is opened
 - [ ] If it helps: fine-tune Chronos-2 with its built-in `fit()` (LoRA), same walk-forward
 
 ## Housekeeping
 - [ ] `python main.py 4 --only x` overwrites journal, leaderboard and skill book with only model x: merge into the full ones instead
-- [ ] Dashboard Run page: run steps in the background with a log file (clicking around now stops the live output and can hang the step)
+- [x] Dashboard Run page: runs in the background with a log file (`data/runs/live.log`), keeps going when you click around or close the dashboard
+- [ ] 4 battle files are over GitHub's 100 MB limit (journal.csv, journal_h5.csv, journal_h60.csv, skillbook.csv): keep them out of git (they're rebuilt from the cached forecasts) or use Git LFS
 - [x] `data/` and `__pycache__/` stay in git on purpose
 - [ ] `tools/` (monthly reminder, backup) and `secrets.example.env` are mentioned in 07_judge and 08_notify, but missing
 - [ ] Moirai 2 install: `uni2ts` needs `--no-deps`; make that one command (setup script)

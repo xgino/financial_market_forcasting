@@ -11,17 +11,19 @@ again: it continues where it was. Forgot a month? The next run fills in what's m
   python main.py 3 --fresh       redo step 3 from scratch, ignore what's saved
   python main.py list            every step and its players
   python main.py test            run everything in tests/
+  python main.py 1-7 --every 24   keep it up to date: run steps 1-7 again every 24 hours (Ctrl+C stops)
   python main.py 4-6 --holdout   THE FINAL TEST: include the holdout. Results go to separate *_holdout files.
                                  Do it once, when models and strategies are final. Every opening is logged.
   streamlit run dashboard.py     the dashboard
 
+One run at a time: a second one stops right away (core/runs.py), two at once would break the files.
 Always from the venv in this folder (source venv/bin/activate): any other Python is stopped (core/env.py).
 """
 import argparse
 import sys
 import time
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -31,6 +33,7 @@ from core.env import require_venv
 require_venv()  # only the venv in this folder, never Anaconda or another Python
 
 import settings
+from core import runs
 from core.plugins import load_file, player_files, step_folders
 
 
@@ -87,6 +90,7 @@ def main():
     ap.add_argument("--check", action="store_true", help="no-future check instead of a normal run")
     ap.add_argument("--fresh", action="store_true", help="ignore what's saved and redo it")
     ap.add_argument("--holdout", action="store_true", help="the final test: include the holdout period")
+    ap.add_argument("--every", type=float, help="keep going: run again every N hours (stop with Ctrl+C)")
     args = ap.parse_args()
     args.only = [x.strip() for x in args.only.split(",")] if args.only else None
 
@@ -110,6 +114,25 @@ def main():
                 f.write("time,steps\n")
             f.write(f"{datetime.now().isoformat(timespec='seconds')},{args.what}\n")
 
+    runs.take_lock(args.what + (f" every {args.every:g}h" if args.every else ""))
+    try:
+        while True:
+            runs.set_state("running")
+            rows = run_steps(args)
+            log_run(rows)
+            if not args.every or any(r["status"] == "stopped" for r in rows):
+                break
+            nxt = datetime.now() + timedelta(hours=args.every)
+            runs.set_state("sleeping", next_run=nxt.isoformat(timespec="minutes"))
+            print(f"\nNext run {nxt:%Y-%m-%d %H:%M}. Stop with Ctrl+C (or Stop on the dashboard).", flush=True)
+            time.sleep(max(60.0, args.every * 3600))
+    except KeyboardInterrupt:
+        print("\nStopped.")
+    finally:
+        runs.release()
+
+
+def run_steps(args):
     rows = []
     for n, folder in pick(args.what):
         step = folder / "_step.py"
@@ -130,7 +153,7 @@ def main():
                      "seconds": round(time.time() - t0, 1), "summary": str(summary)[:300]})
         if status != "ok":
             break
-    log_run(rows)
+    return rows
 
 
 if __name__ == "__main__":

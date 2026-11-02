@@ -51,24 +51,42 @@ def data_hash(tl, assets, until, macro=False):
     return store.fingerprint(*parts)
 
 
+MONTH_TOLERANCE = 1e-3   # a move off by less than 0.1% in a month doesn't count as changed
+
+
 def month_hashes(tl, assets, until, macro=False):
-    """{"2014-03": fingerprint of that month's data}. When old prices change, only forecasts from the
-    first changed month on are made again: a forecast never depends on later data.
+    """{"2014-03": [[days, sum of moves, sum of move sizes] per asset / macro series]}. When old prices
+    change, only forecasts from the first changed month on are made again: a forecast never depends on
+    later data.
     Prices count as daily moves, not levels: Yahoo rescales an ETF's whole past at every dividend, which
-    changes no move except the dividend day's (and every model here reads moves, not euro levels)."""
+    changes no move except the dividend day's (and every model here reads moves, not euro levels).
+    Numbers, not an exact fingerprint: each rescale also shifts every move by ~0.000003 (rounding at
+    Yahoo), which would flip the last decimal somewhere in every month and redo all of history."""
     v = tl.view(until)
-    parts = [np.log(v.closes(a)).diff().round(6) for a in sorted(assets)]
+    parts = [np.log(v.closes(a)).diff().dropna() for a in sorted(assets)]
     if macro:
-        parts += [v.extra(n).round(6) for n in sorted(tl.extra_names)]
+        parts += [v.extra(n).dropna() for n in sorted(tl.extra_names)]
     months = sorted({str(m) for p in parts for m in p.index.to_period("M")})
     by = [p.groupby(p.index.to_period("M").astype(str)) for p in parts]
-    return {m: store.fingerprint(*[g.get_group(m) for g in by if m in g.groups]) for m in months}
+    return {m: [[len(x), round(float(x.sum()), 7), round(float(x.abs().sum()), 7)]
+                for x in (g.get_group(m) for g in by if m in g.groups)] for m in months}
+
+
+def _same_month(a, b):
+    if not isinstance(a, list) or not isinstance(b, list) or len(a) != len(b):
+        return False
+    return all(x[0] == y[0] and all(abs(p - q) <= MONTH_TOLERANCE * max(1.0, abs(p)) for p, q in zip(x[1:], y[1:]))
+               for x, y in zip(a, b))
 
 
 def first_changed_day(old, new):
-    """First day of the first month whose data differs (None = nothing changed up to old's last month)."""
+    """First day of the first month whose data differs (None = nothing changed up to old's last month).
+    A cache saved with the older exact fingerprints (strings) can't be compared: it's kept and only its
+    last month is made again."""
+    if old and all(isinstance(x, str) for x in old.values()):
+        return pd.Timestamp(max(old) + "-01")
     for m in sorted(old):
-        if old[m] != new.get(m):
+        if not _same_month(old[m], new.get(m)):
             return pd.Timestamp(m + "-01")
     return None
 

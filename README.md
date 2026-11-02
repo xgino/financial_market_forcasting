@@ -34,7 +34,7 @@ Not numbered:
   pretrained model wrappers, copied model code in `core/kronos/` and `core/timemoe/`)
 - `tests/` checks that everything stays honest
 - `settings.py` all global settings in one place (assets, horizon, holdout, trust, fees)
-- `main.py` runs the steps, `dashboard.py` shows everything
+- `main.py` runs the steps, `dashboard.py` shows everything (its pages: `app/pages/`, one file each)
 
 ## The models (04_models)
 
@@ -73,8 +73,24 @@ python main.py 4 --only tirex,moirai_2   # only these players
 python main.py 4 --check    # prove step 4's players can't see the future
 python main.py list         # steps and players
 python main.py test         # all tests
+python main.py 1-7 --every 24   # keep it up to date: steps 1-7 now and every 24 hours (Ctrl+C stops)
 streamlit run dashboard.py  # the dashboard (or: venv/bin/streamlit run dashboard.py)
 ```
+
+## The dashboard
+`streamlit run dashboard.py`, then pick a page on the left. Every page is one file in `app/pages/`, shared
+helpers are in `app/common.py`: to change a page, change its file.
+- **Overview**: the signal per asset (the models' best guess against the market's normal swing and the costs),
+  the best strategy against buy & hold, which models have proven an edge, the judge's verdict
+- **Forecasts**: the price with every model's forecast ahead (week / month / quarter), every past guess against
+  what really happened (development years only, the holdout stays closed), and the long-term view
+- **This month**: the decision for one asset in detail; **Calculator**: try amounts and models
+- **Results**, **Leaderboard**, **Battle**, **Models**, **Judge**: how good the strategies and models are
+- **Run**, **Training**, **Data**, **Email**: start steps, follow training, check the data, the monthly email
+
+The sidebar (every page) shows whether a run is going, with **Update now** (steps 1-7), **Keep updating every
+day** and **Stop**. Runs go in the background: clicking around or closing the dashboard doesn't stop them. Only
+one run at a time: a second one (dashboard or terminal) stops right away, because two at once break the files.
 
 Every step only does what's missing, so stopping and starting again continues where it was (Ctrl+C is safe:
 forecasts are saved at least every minute). `--fresh` is the only way to redo a step from scratch.

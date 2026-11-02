@@ -23,3 +23,8 @@ secrets.env
 # Fine-tuned model weights (~190 MB each, over GitHub's 100 MB file limit). index.csv stays in git;
 # python main.py 3 --only chronos_finetune makes the weights again.
 data/checkpoints/chronos_finetune/*/
+
+# a run in progress (core/runs.py) and half-written files
+data/runs/running.json
+data/runs/live.log
+*.tmp

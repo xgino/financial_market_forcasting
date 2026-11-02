@@ -126,3 +126,44 @@ def test_pooling_weighs_own_asset_first():
     assert abs(p["warn_hit"] - 0.6) < 1e-9 and p["warn_trust"] > 0
     own = pooled(rows, "gold", "own").loc["m"]
     assert abs(own["ic"] - 0.10) < 1e-9 and abs(own["periods"] - 40) < 1e-9
+
+
+def test_one_run_at_a_time():
+    """A running run blocks a second one; a lock left by a crashed run (process gone) doesn't."""
+    import json
+    import subprocess
+    import sys
+
+    from core import runs
+
+    old = runs.LOCK
+    with tempfile.TemporaryDirectory() as tmp:
+        runs.LOCK = Path(tmp) / "running.json"
+        try:
+            gone = subprocess.Popen([sys.executable, "-c", "pass"])
+            gone.wait()
+            runs.LOCK.write_text(json.dumps({"pid": gone.pid, "what": "4", "started": "x"}))
+            assert runs.running() is None, "a crashed run's lock still blocks"
+            runs.take_lock("4")
+            assert runs.running()["pid"] == __import__("os").getpid()
+            try:
+                runs.take_lock("5")
+                raise AssertionError("a second run was allowed")
+            except SystemExit:
+                pass
+            runs.release()
+            assert not runs.LOCK.exists()
+        finally:
+            runs.LOCK = old
+
+
+def test_csv_is_swapped_in_whole():
+    """write_csv leaves no temporary file behind and the file reads back the same."""
+    from core import store
+
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "x.csv"
+        df = pd.DataFrame({"date": pd.date_range("2020-01-01", periods=3), "v": [1.0, 2.0, 3.0]})
+        store.write_csv(df, p, {"k": 1}, index=False)
+        assert sorted(f.name for f in Path(tmp).iterdir()) == ["x.csv", "x.meta.json"]
+        assert store.read_csv(p).equals(df)
